@@ -35,7 +35,7 @@
 
 1. **克隆仓库**
    ```bash
-   git clone https://github.com/yourusername/CatMusic.git
+   git clone https://github.com/TF49/CatMusic.git
    cd CatMusic
    ```
 

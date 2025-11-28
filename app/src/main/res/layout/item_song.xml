@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_marginTop="10dp"
+    android:layout_marginBottom="@dimen/marginSize"
+    android:layout_marginRight="@dimen/marginSize"
+    android:layout_marginLeft="@dimen/marginSize"
+    android:layout_height="wrap_content">
+
+    <ImageView
+        android:id="@+id/song_icon"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_marginRight="@dimen/marginSize"
+        android:scaleType="centerCrop"/>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_height="match_parent">
+
+        <TextView
+            android:textColor="@color/black"
+            android:id="@+id/song_title"
+            android:text="歌曲标题"
+            android:textSize="@dimen/T2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"/>
+
+        <TextView
+            android:id="@+id/song_artist"
+            android:layout_weight="1"
+            android:textColor="@color/black"
+            android:textSize="@dimen/T3"
+            android:layout_width="match_parent"
+            android:text="歌手"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"/>
+
+    </LinearLayout>
+</LinearLayout>

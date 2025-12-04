@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 外层阴影效果 -->
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:startColor="#40000000"
+                android:endColor="#00000000"
+                android:angle="270" />
+            <size
+                android:width="300dp"
+                android:height="300dp" />
+        </shape>
+    </item>
+    
+    <!-- 内层渐变背景 -->
+    <item
+        android:left="10dp"
+        android:top="10dp"
+        android:right="10dp"
+        android:bottom="10dp">
+        <shape android:shape="oval">
+            <gradient
+                android:startColor="#FF6B9B"
+                android:centerColor="#FF8E53"
+                android:endColor="#FFD166"
+                android:type="radial"
+                android:centerX="0.5"
+                android:centerY="0.5"
+                android:gradientRadius="130dp" />
+            <stroke 
+                android:width="2dp" 
+                android:color="#80FFFFFF" />
+        </shape>
+    </item>
+</layer-list>

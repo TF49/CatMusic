@@ -4,6 +4,9 @@ import android.util.Log;
 
 import com.example.catmusic.Config;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 
 import okhttp3.Call;
@@ -63,9 +66,36 @@ public class LyricBiz {
                     return;
                 }
 
-                String lyricContent = response.body().string();
-                Log.d(TAG, "获取歌词成功，内容长度: " + lyricContent.length());
-                callback.onSuccess(lyricContent);
+                String jsonString = response.body().string();
+                Log.d(TAG, "获取歌词成功，原始内容长度: " + jsonString.length());
+
+                try {
+                    JSONObject root = new JSONObject(jsonString);
+                    int code = root.optInt("code", -1);
+                    if (code != 0) {
+                        String msg = root.optString("message", "歌词接口返回错误，code=" + code);
+                        callback.onFailure(new IOException(msg));
+                        return;
+                    }
+
+                    JSONObject result = root.optJSONObject("result");
+                    if (result == null) {
+                        callback.onFailure(new IOException("歌词数据字段缺失"));
+                        return;
+                    }
+
+                    String lyricContent = result.optString("lyric", "");
+                    if (lyricContent == null || lyricContent.isEmpty()) {
+                        callback.onFailure(new IOException("歌词内容为空"));
+                        return;
+                    }
+
+                    Log.d(TAG, "解析歌词成功，歌词长度: " + lyricContent.length());
+                    callback.onSuccess(lyricContent);
+                } catch (JSONException e) {
+                    Log.e(TAG, "解析歌词JSON失败: " + e.getMessage());
+                    callback.onFailure(e);
+                }
             }
         });
     }

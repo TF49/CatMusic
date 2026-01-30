@@ -106,7 +106,7 @@ public class HomeActivity extends BaseActivity
     {
         //2.定义我们的请求
         Request request = new Request.Builder()
-                .url("http://172.18.16.222:3000/api/getRecommend")
+				.url("http://192.168.1.16:3000/api/getRecommend")
                 .build();
 
         //3.通过异步的方式发送请求

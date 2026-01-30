@@ -32,9 +32,32 @@ public class LyricParser {
         }
         
         List<Lyric.LyricLine> lyricLines = new ArrayList<>();
-        
         try {
-            // 先清理歌词字符串，移除所有换行符和转义换行符
+            // 先判断是否为标准 LRC（带时间戳）的歌词
+            boolean hasTimeTag = TIME_PATTERN.matcher(lyricString).find();
+
+            // 如果没有时间戳，则按纯文本歌词处理：按行拆分，保留换行结构
+            if (!hasTimeTag) {
+                String[] lines = lyricString.split("\\r?\\n");
+                long time = 0L;
+                long step = 3000L; // 给每行一个递增的虚拟时间戳，便于滚动
+
+                for (String line : lines) {
+                    String content = line.trim();
+                    if (content.isEmpty()) continue;
+                    lyricLines.add(new Lyric.LyricLine(time, content));
+                    time += step;
+                }
+
+                if (lyricLines.isEmpty()) {
+                    return null;
+                }
+
+                return new Lyric(lyricLines);
+            }
+
+            // 以下为带时间戳的 LRC 解析逻辑
+            // 先清理歌词字符串，移除所有换行符和转义换行符，方便用正则整体解析
             String cleanedLyric = lyricString.replaceAll("\\n", " ").replaceAll("\\\\n", " ");
             
             // 处理歌词内容[时间戳]格式

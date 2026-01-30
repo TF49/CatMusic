@@ -146,9 +146,9 @@ public class SongListActivity extends BaseActivity
      */
     private void getRecommendSongs()
     {
-        long albumId = getIntent().getLongExtra("id", 0);
-        // 修复URL构造，正确拼接参数
-        String url = "http://172.18.16.222:3000/api/getAlbum?id=" + albumId;
+		long albumId = getIntent().getLongExtra("id", 0);
+		// 修复URL构造，正确拼接参数
+		String url = "http://192.168.1.16:3000/api/getAlbum?id=" + albumId;
         Log.d("SongListActivity", "请求专辑歌曲列表: " + url);
         Request request = new Request.Builder()
                 .url(url)
@@ -238,7 +238,7 @@ public class SongListActivity extends BaseActivity
             return;
         }
 
-        // 构建mid参数：mid[]=0009Q7MT3WQKpB&mid[]=001maG3s4AJfuU&mid[]=004FgYOA33AR6H
+		// 构建mid参数：mid[]=0009Q7MT3WQKpB&mid[]=001maG3s4AJfuU&mid[]=004FgYOA33AR6H
         StringBuilder midUrls = new StringBuilder();
         for (int i = 0; i < songs.size(); i++)
         {
@@ -256,8 +256,8 @@ public class SongListActivity extends BaseActivity
             }
         }
 
-        // 修正URL地址，使用与歌曲API相同的服务器地址
-        String url = "http://172.18.16.222:3000/api/getSongsUrl?" + midUrls.toString();
+		// 修正URL地址，使用与歌曲API相同的服务器地址
+		String url = "http://192.168.1.16:3000/api/getSongsUrl?" + midUrls.toString();
         Log.d("SongListActivity", "请求歌曲URL: " + url);
 
         Request request = new Request.Builder()

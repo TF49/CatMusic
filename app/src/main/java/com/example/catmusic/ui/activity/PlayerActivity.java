@@ -497,8 +497,8 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                 return;
             }
 
-            // 修正URL地址，使用与歌曲API相同的服务器地址
-            String url = "http://172.18.16.222:3000/api/getSongsUrl?" + midUrls.toString();
+			// 修正URL地址，使用与歌曲API相同的服务器地址
+			String url = "http://192.168.1.16:3000/api/getSongsUrl?" + midUrls.toString();
             Log.d(TAG, "请求歌曲URL: " + url);
 
             Request request = new Request.Builder()

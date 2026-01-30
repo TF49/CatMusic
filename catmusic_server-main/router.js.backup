@@ -27,33 +27,6 @@ const commonParams = {
   platform: 'yqq.json'
 }
 
-// 自定义歌曲配置区域 - 开始
-// 在这里配置你自己的歌曲信息
-// 注意：
-// 1. id、mid 要保证在全局唯一，避免与 QQ 音乐返回的数据冲突
-// 2. url 必须是可以被 Android 客户端直接访问和播放的音频地址（建议 https）
-// 3. 结构要与 handleSongList 返回的字段保持一致，便于前端统一处理
-const customSongs = [
-  {
-    id: 999999001,
-    mid: 'custom_meiyubaodeyu_001',
-    name: '没预报的雨',
-    singer: '林时屿、葛雨晴',
-    // 使用自己服务器静态资源，避免外部直链限制或无法播放
-    // mp3 已放在 public/music/没预报的雨.mp3
-    // 访问地址示例：http://192.168.1.16:3000/music/没预报的雨.mp3
-    url: 'http://192.168.1.16:3000/music/没预报的雨.mp3',
-    duration: 202,
-    // 封面图建议也走自己服务器静态资源
-    // 将图片放在 public/images/meiyubaodeyu.jpg（文件名可自定义）
-    // 访问地址示例：http://192.168.1.16:3000/images/meiyubaodeyu.jpg
-    pic: 'http://192.168.1.16:3000/images/没预报的雨.jpg',
-    album: '没预报的雨'
-  }
-  // 需要继续添加自定义歌曲时，在此对象后面追加逗号和新的歌曲对象即可
-]
-// 自定义歌曲配置区域 - 结束
-
 // 获取一个随机数值
 function getRandomVal(prefix = '') {
   return prefix + (Math.random() + '').replace('0.', '')
@@ -385,53 +358,19 @@ function registerSongsUrl(app) {
   app.get('/api/getSongsUrl', (req, res) => {
     const mid = req.query.mid
 
-    if (!mid) {
-      return res.json({
-        code: -1,
-        message: '歌曲mid不能为空'
-      })
-    }
-
-    // 统一处理成数组，便于后续逻辑
-    const mids = Array.isArray(mid) ? mid : [mid]
-
-    // 以歌曲的 mid 为 key，存储歌曲 URL（同时容纳自定义和 QQ 音乐的 URL）
-    const urlMap = {}
-
-    // 自定义歌曲 mid 集合
-    const customMids = customSongs.map((song) => song.mid)
-    const nonCustomMids = []
-
-    // 先为自定义歌曲填充 URL，其余的留给 QQ 音乐接口处理
-    mids.forEach((m) => {
-      if (customMids.includes(m)) {
-        const song = customSongs.find((s) => s.mid === m)
-        urlMap[m] = (song && song.url) || ''
-      } else {
-        nonCustomMids.push(m)
-      }
-    })
-
-    // 如果全部都是自定义歌曲，就直接返回
-    if (!nonCustomMids.length) {
-      return res.json({
-        code: ERR_OK,
-        result: {
-          map: urlMap
-        }
-      })
-    }
-
     let midGroup = []
     // 第三方接口只支持最多处理 100 条数据，所以如果超过 100 条数据，我们要把数据按每组 100 条切割，发送多个请求
-    if (nonCustomMids.length > 100) {
-      const groupLen = Math.ceil(nonCustomMids.length / 100)
+    if (mid.length > 100) {
+      const groupLen = Math.ceil(mid.length / 100)
       for (let i = 0; i < groupLen; i++) {
-        midGroup.push(nonCustomMids.slice(i * 100, (100 * (i + 1))))
+        midGroup.push(mid.slice(i * 100, (100 * (i + 1))))
       }
     } else {
-      midGroup = [nonCustomMids]
+      midGroup = [mid]
     }
+
+    // 以歌曲的 mid 为 key，存储歌曲 URL
+    const urlMap = {}
 
     // 处理返回的 mid
     function process(mid) {
@@ -525,13 +464,10 @@ function registerAlbum(app) {
         const list = data.req_0.data.songlist
         const songList = handleSongList(list)
 
-        // 将自定义歌曲追加到歌单列表中
-        const allSongs = songList.concat(customSongs)
-
         res.json({
           code: ERR_OK,
           result: {
-            songs: allSongs
+            songs: songList
           }
         })
       } else {
@@ -760,7 +696,7 @@ function registerSearch(app) {
 function registerLyric(app) {
   app.get('/api/getLyric', (req, res) => {
     const { mid } = req.query
-
+    
     if (!mid) {
       return res.json({
         code: -1,
@@ -768,85 +704,9 @@ function registerLyric(app) {
       })
     }
 
-    // 先检查是否为自定义歌曲，如果是则直接返回预设歌词
-    const customSong = customSongs.find((song) => song.mid === mid)
-    if (customSong) {
-      // 这里可以根据不同 mid 返回不同歌词（此处为纯文本歌词，不带时间轴）
-      const customLyrics = {
-        // 纯文本歌词，按行分割，格式与线上歌词保持一致，方便客户端逐行展示
-        custom_meiyubaodeyu_001: `作词 : 葛雨晴
-作曲 : 葛雨晴
-编曲 Arranger：SunnyDay Studio
-混音师 Mixing Engineer：夏子皓
-和声 Backing Vocalist：林时屿/葛雨晴
-和声编写 Backing Vocal Arrangement：葛雨晴
-制作人 Producer：葛雨晴
-
-空气 变得 湿漉漉 的 星期几
-躲雨 的 屋檐下 有点 拥挤
-你低头 哼着 陌生的 旋律
-雨滴 像在 配合 你的 呼吸
-我假装 抬头在看 窗外的 天气
-其实 视线 早就 偷偷 的偏离
-想 捕捉 有关于你 的 讯息
-喜欢 却 偷偷 藏进了 心底
-
-突然一场 没预报的 大雨
-你的靠近扰乱我的思绪
-我退后一步 怕太有距离
-却不敢靠近 哪怕几厘米
-如果有天的我终于鼓起 勇气
-听懂 了你玩笑里的深意
-不想只 维持着 朋友关系
-想成为 你 最特别 的 唯一
-
-我假装 抬头在看 窗外的 天气
-其实 视线 早就 偷偷 的偏离
-想 捕捉 有关于你 的 讯息
-喜欢 却 偷偷 藏进了 心底
-突然一场 没预报的 大雨
-你的靠近扰乱我的思绪
-我退后一步 怕太有距离
-却不敢靠近 哪怕几厘米
-
-如果有天的我终于鼓起 勇气
-听懂了你玩笑里的深意
-不想只 维持着 朋友关系
-想成为 你 最特别 的 唯一
-
-雨悄悄 淅沥沥
-一点点落进心里
-别怀疑 我眼底
-藏不住你的秘密
-普通朋友的定义
-早已模糊了 边际
-我其实一直等你
-一个肯定
-
-突然一场 没预报的大雨
-你的靠近扰乱我的思绪
-我退后一步 怕太有距离
-却不敢靠近 哪怕几厘米
-如果有天的我终于鼓起 勇气
-听懂了你玩笑里的深意
-不想只 维持着 朋友关系
-想成为你最特别的 唯一`
-      }
-
-      const lyric = customLyrics[mid] || '暂无歌词'
-
-      return res.json({
-        code: ERR_OK,
-        result: {
-          lyric,
-          trans: ''
-        }
-      })
-    }
-
     // 使用QQ音乐API获取歌词
     const url = 'https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg'
-
+    
     const data = {
       songmid: mid,
       g_tk_new_20200303: token,

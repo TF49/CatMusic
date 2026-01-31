@@ -2,6 +2,8 @@
  * 该文件是运行在 Node.js 端的，获取数据的基本的思路就是后端代理，即提供接口路由供前端页面使用，然后在路由内部，我们接收到前端请求后，再发送 HTTP 请求到第三方服务接口，携带相应的请求参数，包括签名的参数字段等等。
  * 对于从第三方接口返回的数据，我们会做一层数据处理，最终提供给前端的数据前端可以直接使用，无需再处理。这样也比较符合真实企业项目的开发规范，即数据的处理放在后端做，前端只做数据渲染和交互。
  */
+const fs = require('fs')
+const path = require('path')
 const axios = require('axios')
 const pinyin = require('pinyin')
 const Base64 = require('js-base64').Base64
@@ -27,32 +29,34 @@ const commonParams = {
   platform: 'yqq.json'
 }
 
-// 自定义歌曲配置区域 - 开始
-// 在这里配置你自己的歌曲信息
-// 注意：
-// 1. id、mid 要保证在全局唯一，避免与 QQ 音乐返回的数据冲突
-// 2. url 必须是可以被 Android 客户端直接访问和播放的音频地址（建议 https）
-// 3. 结构要与 handleSongList 返回的字段保持一致，便于前端统一处理
-const customSongs = [
+// 自定义专辑与歌曲配置区域 - 开始
+// 歌曲仅出现在对应专辑中，不再混入所有歌单
+// 说明：id、mid 需全局唯一；url、pic 需 Android 可访问
+const customAlbums = [
   {
-    id: 999999001,
-    mid: 'custom_meiyubaodeyu_001',
-    name: '没预报的雨',
-    singer: '林时屿、葛雨晴',
-    // 使用自己服务器静态资源，避免外部直链限制或无法播放
-    // mp3 已放在 public/music/没预报的雨.mp3
-    // 访问地址示例：http://192.168.1.16:3000/music/没预报的雨.mp3
-    url: 'http://192.168.1.16:3000/music/没预报的雨.mp3',
-    duration: 202,
-    // 封面图建议也走自己服务器静态资源
-    // 将图片放在 public/images/meiyubaodeyu.jpg（文件名可自定义）
-    // 访问地址示例：http://192.168.1.16:3000/images/meiyubaodeyu.jpg
-    pic: 'http://192.168.1.16:3000/images/没预报的雨.jpg',
-    album: '没预报的雨'
+    id: 999000001,
+    title: '没预报的雨',
+    username: '黄依静大镁铝',
+    pic: 'http://192.168.1.19:3000/images/没预报的雨.jpg',
+    songs: [
+      {
+        id: 999999001,
+        mid: 'custom_meiyubaodeyu_001',
+        name: '没预报的雨',
+        singer: '林时屿、葛雨晴',
+        url: 'http://192.168.1.19:3000/music/没预报的雨.mp3',
+        duration: 202,
+        pic: 'http://192.168.1.19:3000/images/没预报的雨.jpg',
+        album: '没预报的雨'
+      }
+    ]
   }
-  // 需要继续添加自定义歌曲时，在此对象后面追加逗号和新的歌曲对象即可
 ]
-// 自定义歌曲配置区域 - 结束
+// 辅助：所有自定义歌曲（供 registerSongsUrl、registerLyric 使用）
+const allCustomSongs = customAlbums.flatMap((a) => a.songs)
+// 辅助：自定义专辑 ID 集合
+const customAlbumIds = new Set(customAlbums.map((a) => a.id))
+// 自定义专辑与歌曲配置区域 - 结束
 
 // 获取一个随机数值
 function getRandomVal(prefix = '') {
@@ -223,12 +227,20 @@ function registerRecommend(app) {
           albums.push(albumItem)
         }
 
-        // 往前端发送一个标准格式的响应数据，包括成功错误码和数据
+        // 将自定义专辑追加到推荐列表前面
+        const customAlbumsForList = customAlbums.map((a) => ({
+          id: a.id,
+          title: a.title,
+          username: a.username,
+          pic: a.pic
+        }))
+        const allAlbums = [...customAlbumsForList, ...albums]
+
         res.json({
           code: ERR_OK,
           result: {
             sliders,
-            albums
+            albums: allAlbums
           }
         })
       } else {
@@ -399,13 +411,13 @@ function registerSongsUrl(app) {
     const urlMap = {}
 
     // 自定义歌曲 mid 集合
-    const customMids = customSongs.map((song) => song.mid)
+    const customMids = allCustomSongs.map((song) => song.mid)
     const nonCustomMids = []
 
     // 先为自定义歌曲填充 URL，其余的留给 QQ 音乐接口处理
     mids.forEach((m) => {
       if (customMids.includes(m)) {
-        const song = customSongs.find((s) => s.mid === m)
+        const song = allCustomSongs.find((s) => s.mid === m)
         urlMap[m] = (song && song.url) || ''
       } else {
         nonCustomMids.push(m)
@@ -496,12 +508,25 @@ function registerSongsUrl(app) {
 // 注册歌单专辑接口
 function registerAlbum(app) {
   app.get('/api/getAlbum', (req, res) => {
+    const albumId = Number(req.query.id)
+
+    // 判断是否为自定义专辑，若是则直接返回该专辑下的歌曲
+    if (customAlbumIds.has(albumId)) {
+      const album = customAlbums.find((a) => a.id === albumId)
+      return res.json({
+        code: ERR_OK,
+        result: {
+          songs: album ? album.songs : []
+        }
+      })
+    }
+
     const data = {
       req_0: {
         module: 'srf_diss_info.DissInfoServer',
         method: 'CgiGetDiss',
         param: {
-          disstid: Number(req.query.id),
+          disstid: albumId,
           onlysonglist: 1,
           song_begin: 0,
           song_num: 100
@@ -516,7 +541,6 @@ function registerAlbum(app) {
     }
 
     const sign = getSecuritySign(JSON.stringify(data))
-
     const url = `https://u.y.qq.com/cgi-bin/musics.fcg?_=${getRandomVal()}&sign=${sign}`
 
     post(url, data).then((response) => {
@@ -524,14 +548,10 @@ function registerAlbum(app) {
       if (data.code === ERR_OK) {
         const list = data.req_0.data.songlist
         const songList = handleSongList(list)
-
-        // 将自定义歌曲追加到歌单列表中
-        const allSongs = songList.concat(customSongs)
-
         res.json({
           code: ERR_OK,
           result: {
-            songs: allSongs
+            songs: songList
           }
         })
       } else {
@@ -768,72 +788,19 @@ function registerLyric(app) {
       })
     }
 
-    // 先检查是否为自定义歌曲，如果是则直接返回预设歌词
-    const customSong = customSongs.find((song) => song.mid === mid)
+    // 先检查是否为自定义歌曲，如果是则从 public/lyrics/ 读取对应歌词文件
+    const customSong = allCustomSongs.find((song) => song.mid === mid)
     if (customSong) {
-      // 这里可以根据不同 mid 返回不同歌词（此处为纯文本歌词，不带时间轴）
-      const customLyrics = {
-        // 纯文本歌词，按行分割，格式与线上歌词保持一致，方便客户端逐行展示
-        custom_meiyubaodeyu_001: `作词 : 葛雨晴
-作曲 : 葛雨晴
-编曲 Arranger：SunnyDay Studio
-混音师 Mixing Engineer：夏子皓
-和声 Backing Vocalist：林时屿/葛雨晴
-和声编写 Backing Vocal Arrangement：葛雨晴
-制作人 Producer：葛雨晴
+      // 歌词文件命名规则：{mid}.txt 或 {mid}.md，放在 public/lyrics/ 目录下
+      const txtPath = path.join(__dirname, 'public', 'lyrics', `${mid}.txt`)
+      const mdPath = path.join(__dirname, 'public', 'lyrics', `${mid}.md`)
 
-空气 变得 湿漉漉 的 星期几
-躲雨 的 屋檐下 有点 拥挤
-你低头 哼着 陌生的 旋律
-雨滴 像在 配合 你的 呼吸
-我假装 抬头在看 窗外的 天气
-其实 视线 早就 偷偷 的偏离
-想 捕捉 有关于你 的 讯息
-喜欢 却 偷偷 藏进了 心底
-
-突然一场 没预报的 大雨
-你的靠近扰乱我的思绪
-我退后一步 怕太有距离
-却不敢靠近 哪怕几厘米
-如果有天的我终于鼓起 勇气
-听懂 了你玩笑里的深意
-不想只 维持着 朋友关系
-想成为 你 最特别 的 唯一
-
-我假装 抬头在看 窗外的 天气
-其实 视线 早就 偷偷 的偏离
-想 捕捉 有关于你 的 讯息
-喜欢 却 偷偷 藏进了 心底
-突然一场 没预报的 大雨
-你的靠近扰乱我的思绪
-我退后一步 怕太有距离
-却不敢靠近 哪怕几厘米
-
-如果有天的我终于鼓起 勇气
-听懂了你玩笑里的深意
-不想只 维持着 朋友关系
-想成为 你 最特别 的 唯一
-
-雨悄悄 淅沥沥
-一点点落进心里
-别怀疑 我眼底
-藏不住你的秘密
-普通朋友的定义
-早已模糊了 边际
-我其实一直等你
-一个肯定
-
-突然一场 没预报的大雨
-你的靠近扰乱我的思绪
-我退后一步 怕太有距离
-却不敢靠近 哪怕几厘米
-如果有天的我终于鼓起 勇气
-听懂了你玩笑里的深意
-不想只 维持着 朋友关系
-想成为你最特别的 唯一`
+      let lyric = '暂无歌词'
+      if (fs.existsSync(txtPath)) {
+        lyric = fs.readFileSync(txtPath, 'utf8').trim()
+      } else if (fs.existsSync(mdPath)) {
+        lyric = fs.readFileSync(mdPath, 'utf8').trim()
       }
-
-      const lyric = customLyrics[mid] || '暂无歌词'
 
       return res.json({
         code: ERR_OK,

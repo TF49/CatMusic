@@ -3,7 +3,7 @@ package com.example.catmusic.adapter;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
+import com.example.catmusic.utils.LogUtil;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +17,7 @@ import com.bumptech.glide.Glide;
 import com.example.catmusic.R;
 import com.example.catmusic.bean.SongsList;
 import com.example.catmusic.ui.activity.PlayerActivity;
+import com.example.catmusic.utils.FavoriteManager;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -27,18 +28,35 @@ public class SongsRecyclerViewAdapter extends RecyclerView.Adapter<SongsRecycler
 
     private Context context;
     private List<SongsList.ResultBean.SongsBean> songs;
-    private OnItemClickListener listener; // 添加点击监听器
+    private OnItemClickListener listener;
+    private OnFavoriteClickListener favoriteListener;
+    private FavoriteManager favoriteManager;
+    private boolean showFavoriteButton = true;
 
-    // 定义点击监听器接口
-    public interface OnItemClickListener
-    {
+    public interface OnItemClickListener {
         void onItemClick(int position);
     }
 
-    // 设置点击监听器的方法
-    public void setOnItemClickListener(OnItemClickListener listener)
-    {
+    public interface OnFavoriteClickListener {
+        void onFavoriteClick(int position, boolean isNowFavorite);
+    }
+
+    public void setOnItemClickListener(OnItemClickListener listener) {
         this.listener = listener;
+    }
+
+    public void setOnFavoriteClickListener(OnFavoriteClickListener listener) {
+        this.favoriteListener = listener;
+    }
+
+    /** 设置收藏管理器，为 null 则不显示收藏按钮 */
+    public void setFavoriteManager(FavoriteManager manager) {
+        this.favoriteManager = manager;
+    }
+
+    /** 是否在列表项中显示收藏按钮 */
+    public void setShowFavoriteButton(boolean show) {
+        this.showFavoriteButton = show;
     }
 
     public SongsRecyclerViewAdapter(Context context, List<SongsList.ResultBean.SongsBean> songs)
@@ -84,6 +102,27 @@ public class SongsRecyclerViewAdapter extends RecyclerView.Adapter<SongsRecycler
                         .into(holder.songIcon);
             }
 
+            // 收藏按钮：显示状态与点击
+            if (holder.songFavorite != null) {
+                boolean showFav = showFavoriteButton && favoriteManager != null;
+                holder.songFavorite.setVisibility(showFav ? View.VISIBLE : View.GONE);
+                if (showFav) {
+                    boolean isFav = favoriteManager.isFavorite(song);
+                    holder.songFavorite.setImageResource(isFav ? R.drawable.ic_favorite_filled : R.drawable.ic_favorite_border);
+                    holder.songFavorite.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            int pos = holder.getAdapterPosition();
+                            if (pos < 0 || pos >= songs.size()) return;
+                            SongsList.ResultBean.SongsBean s = songs.get(pos);
+                            boolean nowFav = favoriteManager.toggleFavorite(s);
+                            holder.songFavorite.setImageResource(nowFav ? R.drawable.ic_favorite_filled : R.drawable.ic_favorite_border);
+                            if (favoriteListener != null) favoriteListener.onFavoriteClick(pos, nowFav);
+                        }
+                    });
+                }
+            }
+
             // 设置点击事件
             holder.itemView.setOnClickListener(new View.OnClickListener()
             {
@@ -91,7 +130,7 @@ public class SongsRecyclerViewAdapter extends RecyclerView.Adapter<SongsRecycler
                 public void onClick(View v)
                 {
                     int pos = holder.getAdapterPosition();
-                    Log.d("SongsAdapter", "点击位置: " + pos);
+                    LogUtil.d("SongsAdapter", "点击位置: " + pos);
                     
                     // 调用Activity设置的监听器
                     if (listener != null)
@@ -101,7 +140,7 @@ public class SongsRecyclerViewAdapter extends RecyclerView.Adapter<SongsRecycler
                     
                     // 检查上下文和数据有效性
                     if (context == null || songs == null || songs.isEmpty() || pos < 0 || pos >= songs.size()) {
-                        Log.e("SongsAdapter", "无效的上下文或数据");
+                        LogUtil.e("SongsAdapter", "无效的上下文或数据");
                         return;
                     }
                     
@@ -113,9 +152,9 @@ public class SongsRecyclerViewAdapter extends RecyclerView.Adapter<SongsRecycler
                         intent.putExtra("current_position", pos);
                         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         context.startActivity(intent);
-                        Log.d("SongsAdapter", "成功启动PlayerActivity");
+                        LogUtil.d("SongsAdapter", "成功启动PlayerActivity");
                     } catch (Exception e) {
-                        Log.e("SongsAdapter", "启动PlayerActivity失败: " + e.getMessage());
+                        LogUtil.e("SongsAdapter", "启动PlayerActivity失败: " + e.getMessage());
                         Toast.makeText(context, "无法打开播放器: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 }
@@ -147,6 +186,7 @@ public class SongsRecyclerViewAdapter extends RecyclerView.Adapter<SongsRecycler
         ImageView songIcon;
         TextView songTitle;
         TextView songArtist;
+        ImageView songFavorite;
 
         public SongViewHolder(@NonNull View itemView)
         {
@@ -154,6 +194,7 @@ public class SongsRecyclerViewAdapter extends RecyclerView.Adapter<SongsRecycler
             songIcon = itemView.findViewById(R.id.song_icon);
             songTitle = itemView.findViewById(R.id.song_title);
             songArtist = itemView.findViewById(R.id.song_artist);
+            songFavorite = itemView.findViewById(R.id.song_favorite);
         }
     }
 }

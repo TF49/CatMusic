@@ -6,7 +6,7 @@ package com.example.catmusic;
  */
 public class Config {
     // 服务器基础URL
-	public static final String BASE_URL = "http://192.168.1.16:3000/";// 服务器基础URL
+	public static final String BASE_URL = "http://192.168.1.19:3000/";// 服务器基础URL
     
     // API接口路径
     public static final String API_GET_RECOMMEND = "api/getRecommend";// 获取推荐歌单

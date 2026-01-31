@@ -1,7 +1,8 @@
 package com.example.catmusic.ui.activity;
 
+import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -57,6 +58,12 @@ public class HomeActivity extends BaseActivity
 
         //初始化
         initTabBar(false,"乐猫音乐",true);
+        fd(R.id.tv_logo_header).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(HomeActivity.this, FavoriteActivity.class));
+            }
+        });
 
         //初始化界面组件
         initView();
@@ -93,7 +100,7 @@ public class HomeActivity extends BaseActivity
     
     /**
      * 从服务器获取推荐数据
-     * 创建一个 Request 对象，指定请求的URL为http://172.18.15.220:3000/api/getRecommend
+     * 创建一个 Request 对象，指定请求的URL为http://192.168.1.19:3000/api/getRecommend
      * 通过 okHttpClient.newCall(request).enqueue() 发起异步网络请求
      * 在 onFailure 回调中处理请求失败的情况，使用 runOnUiThread 在主线程中显示错误提示
      * 在 onResponse 回调中处理请求成功的情况：
@@ -106,7 +113,7 @@ public class HomeActivity extends BaseActivity
     {
         //2.定义我们的请求
         Request request = new Request.Builder()
-				.url("http://192.168.1.16:3000/api/getRecommend")
+				.url("http://192.168.1.19:3000/api/getRecommend")
                 .build();
 
         //3.通过异步的方式发送请求

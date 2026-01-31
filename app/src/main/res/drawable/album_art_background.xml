@@ -1,33 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- 外层阴影效果（随 ImageView 尺寸自适应） -->
     <item>
         <shape android:shape="oval">
             <gradient
-                android:startColor="#40000000"
+                android:startColor="#30000000"
                 android:endColor="#00000000"
                 android:angle="270" />
         </shape>
     </item>
-    
-    <!-- 内层渐变背景，形成细边的唱片外圈 -->
     <item
-        android:left="4dp"
-        android:top="4dp"
-        android:right="4dp"
-        android:bottom="4dp">
+        android:left="6dp"
+        android:top="6dp"
+        android:right="6dp"
+        android:bottom="6dp">
         <shape android:shape="oval">
             <gradient
-                android:startColor="#FF6B9B"
-                android:centerColor="#FF8E53"
-                android:endColor="#FFD166"
+                android:startColor="@color/primary_light"
+                android:centerColor="@color/primary"
+                android:endColor="@color/primary_variant"
                 android:type="radial"
                 android:centerX="0.5"
                 android:centerY="0.5"
-                android:gradientRadius="130dp" />
-            <stroke 
-                android:width="2dp" 
-                android:color="#80FFFFFF" />
+                android:gradientRadius="140dp" />
+            <stroke
+                android:width="2dp"
+                android:color="#40FFFFFF" />
         </shape>
     </item>
 </layer-list>

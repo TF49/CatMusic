@@ -10,7 +10,7 @@ import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.util.Log;
+import com.example.catmusic.utils.LogUtil;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.SeekBar;
@@ -22,10 +22,17 @@ import androidx.annotation.Nullable;
 
 import com.bumptech.glide.Glide;
 import com.example.catmusic.R;
+import com.example.catmusic.adapter.PlaylistDialogAdapter;
 import com.example.catmusic.bean.SongUrls;
 import com.example.catmusic.bean.SongsList;
 import com.example.catmusic.service.MusicService;
+import com.example.catmusic.utils.FavoriteManager;
 import com.google.gson.Gson;
+
+import android.app.AlertDialog;
+import android.view.LayoutInflater;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -52,6 +59,9 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
     private ImageView playPauseButton;
     private ImageView nextButton;
     private ImageView randomButton;
+    private ImageView playlistButton;
+    private ImageView favoriteButton;
+    private FavoriteManager favoriteManager;
     
     // 旋转动画相关
     private android.view.animation.RotateAnimation rotateAnimation;
@@ -146,7 +156,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
 
         // 初始化网络请求组件
         initOkHttp();
-        
+        favoriteManager = new FavoriteManager(this);
         // 初始化界面组件
         initView();
 
@@ -182,28 +192,28 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                 switch (focusChange) {
                     case AudioManager.AUDIOFOCUS_GAIN:
                         // 重新获得音频焦点，恢复播放
-                        Log.d(TAG, "重新获得音频焦点");
+                        LogUtil.d(TAG, "重新获得音频焦点");
                         if (musicService != null && musicService.isPaused()) {
                             musicService.resumeMusic();
                         }
                         break;
                     case AudioManager.AUDIOFOCUS_LOSS:
                         // 永久失去音频焦点，暂停播放
-                        Log.d(TAG, "永久失去音频焦点");
+                        LogUtil.d(TAG, "永久失去音频焦点");
                         if (musicService != null && musicService.isPlaying()) {
                             musicService.pauseMusic();
                         }
                         break;
                     case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
                         // 暂时失去音频焦点，暂停播放
-                        Log.d(TAG, "暂时失去音频焦点");
+                        LogUtil.d(TAG, "暂时失去音频焦点");
                         if (musicService != null && musicService.isPlaying()) {
                             musicService.pauseMusic();
                         }
                         break;
                     case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
                         // 暂时失去音频焦点，可以降低音量
-                        Log.d(TAG, "暂时失去音频焦点，降低音量");
+                        LogUtil.d(TAG, "暂时失去音频焦点，降低音量");
                         // 这里由MusicService处理音量调整
                         break;
                 }
@@ -272,18 +282,18 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
         
         SongsList.ResultBean.SongsBean song = songsList.get(currentPosition);
         if (song == null || song.getMid() == null || song.getMid().isEmpty()) {
-            Log.w(TAG, "当前歌曲没有有效的MID，无法获取歌词");
+            LogUtil.w(TAG, "当前歌曲没有有效的MID，无法获取歌词");
             showNoLyric();
             return;
         }
         
         String mid = song.getMid();
-        Log.d(TAG, "开始获取歌词，歌曲MID: " + mid);
+        LogUtil.d(TAG, "开始获取歌词，歌曲MID: " + mid);
         
         lyricBiz.getLyric(mid, new com.example.catmusic.biz.LyricBiz.LyricCallback() {
             @Override
             public void onSuccess(String lyricData) {
-                Log.d(TAG, "获取歌词成功");
+                LogUtil.d(TAG, "获取歌词成功");
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -294,7 +304,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             
             @Override
             public void onFailure(Exception e) {
-                Log.e(TAG, "获取歌词失败: " + e.getMessage());
+                LogUtil.e(TAG, "获取歌词失败: " + e.getMessage());
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -309,7 +319,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
     // 处理歌词数据
     private void handleLyricData(String lyricData) {
         if (lyricData == null || lyricData.isEmpty()) {
-            Log.w(TAG, "歌词数据为空");
+            LogUtil.w(TAG, "歌词数据为空");
             showNoLyric();
             return;
         }
@@ -319,7 +329,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             currentLyric = com.example.catmusic.utils.LyricParser.parseLyric(lyricData);
             
             if (currentLyric == null || currentLyric.getLyricLines().isEmpty()) {
-                Log.w(TAG, "解析歌词失败或歌词为空");
+                LogUtil.w(TAG, "解析歌词失败或歌词为空");
                 showNoLyric();
                 return;
             }
@@ -333,13 +343,13 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                 noLyricText.setVisibility(View.GONE);
             }
             
-            Log.d(TAG, "歌词设置成功，共 " + currentLyric.getLyricLines().size() + " 行歌词");
+            LogUtil.d(TAG, "歌词设置成功，共 " + currentLyric.getLyricLines().size() + " 行歌词");
             
             // 开始歌词同步更新
             startLyricSync();
             
         } catch (Exception e) {
-            Log.e(TAG, "处理歌词数据时出错: " + e.getMessage());
+            LogUtil.e(TAG, "处理歌词数据时出错: " + e.getMessage());
             showNoLyric();
         }
     }
@@ -378,7 +388,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
         if (albumArt != null && rotateAnimation != null && !isRotating) {
             albumArt.startAnimation(rotateAnimation);
             isRotating = true;
-            Log.d(TAG, "开始专辑封面旋转动画");
+            LogUtil.d(TAG, "开始专辑封面旋转动画");
         }
     }
     
@@ -391,7 +401,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                 currentAnimation.cancel();
             }
             isRotating = false;
-            Log.d(TAG, "暂停专辑封面旋转动画");
+            LogUtil.d(TAG, "暂停专辑封面旋转动画");
         }
     }
     
@@ -400,7 +410,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
         if (albumArt != null) {
             albumArt.clearAnimation();
             isRotating = false;
-            Log.d(TAG, "停止专辑封面旋转动画");
+            LogUtil.d(TAG, "停止专辑封面旋转动画");
         }
     }
 
@@ -416,6 +426,8 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
         playPauseButton = findViewById(R.id.btn_play_pause);
         nextButton = findViewById(R.id.btn_next);
         randomButton = findViewById(R.id.btn_shuffle);
+        playlistButton = findViewById(R.id.btn_playlist);
+        favoriteButton = findViewById(R.id.btn_favorite);
         
         // 初始化旋转动画
         initRotateAnimation();
@@ -457,7 +469,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             currentPosition = getIntent().getIntExtra("current_position", 0);
         }
 
-        Log.d(TAG, "接收到歌曲列表，共 " + songsList.size() + " 首歌曲，当前播放第 " + currentPosition + " 首");
+        LogUtil.d(TAG, "接收到歌曲列表，共 " + songsList.size() + " 首歌曲，当前播放第 " + currentPosition + " 首");
 
         // 获取歌曲播放URL
         getSongsUrl();
@@ -472,7 +484,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
      */
     private void getSongsUrl() {
         if (songsList == null || songsList.isEmpty()) {
-            Log.w(TAG, "歌曲列表为空，无法获取URL");
+            LogUtil.w(TAG, "歌曲列表为空，无法获取URL");
             return;
         }
 
@@ -492,14 +504,14 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
 
             // 检查是否有有效的MID
             if (midUrls.length() == 0) {
-                Log.w(TAG, "没有有效的歌曲MID，无法获取URL");
+                LogUtil.w(TAG, "没有有效的歌曲MID，无法获取URL");
                 showSafeToast("没有有效的歌曲信息", Toast.LENGTH_SHORT);
                 return;
             }
 
 			// 修正URL地址，使用与歌曲API相同的服务器地址
-			String url = "http://192.168.1.16:3000/api/getSongsUrl?" + midUrls.toString();
-            Log.d(TAG, "请求歌曲URL: " + url);
+			String url = "http://192.168.1.19:3000/api/getSongsUrl?" + midUrls.toString();
+            LogUtil.d(TAG, "请求歌曲URL: " + url);
 
             Request request = new Request.Builder()
                     .url(url)
@@ -508,7 +520,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             okHttpClient.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                    Log.e(TAG, "获取歌曲URL失败: " + e.getMessage());
+                    LogUtil.e(TAG, "获取歌曲URL失败: " + e.getMessage());
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -522,7 +534,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                     if (response.isSuccessful() && response.body() != null) {
                         try {
                             String jsonData = response.body().string();
-                            Log.d(TAG, "获取歌曲URL响应: " + jsonData);
+                            LogUtil.d(TAG, "获取歌曲URL响应: " + jsonData);
                             SongUrls songUrls = gson.fromJson(jsonData, SongUrls.class);
 
                             runOnUiThread(new Runnable() {
@@ -532,7 +544,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                                 }
                             });
                         } catch (Exception e) {
-                            Log.e(TAG, "解析歌曲URL数据失败: " + e.getMessage());
+                            LogUtil.e(TAG, "解析歌曲URL数据失败: " + e.getMessage());
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -541,7 +553,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                             });
                         }
                     } else {
-                        Log.e(TAG, "获取歌曲URL响应失败: " + response.code());
+                        LogUtil.e(TAG, "获取歌曲URL响应失败: " + response.code());
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -552,7 +564,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                 }
             });
         } catch (Exception e) {
-            Log.e(TAG, "构建歌曲URL请求时出错: " + e.getMessage());
+            LogUtil.e(TAG, "构建歌曲URL请求时出错: " + e.getMessage());
             showSafeToast("请求构建失败: " + e.getMessage(), Toast.LENGTH_SHORT);
         }
     }
@@ -571,7 +583,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                 String mid = song.getMid();
                 if (mid != null && songUrls.getResult().getMap().containsKey(mid)) {
                     String url = songUrls.getResult().getMap().get(mid);
-                    Log.d(TAG, "歌曲 MID: " + mid + ", URL: " + url);
+                    LogUtil.d(TAG, "歌曲 MID: " + mid + ", URL: " + url);
                     if (url != null && !url.isEmpty()) {
                         song.setUrl(url); // 确保SongsBean中有setUrl方法
                         updatedCount++;
@@ -584,7 +596,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             // 更新界面显示
             updateSongInfo();
         } else {
-            Log.e(TAG, "未获取到有效的歌曲URL数据，songUrls对象: " + songUrls);
+            LogUtil.e(TAG, "未获取到有效的歌曲URL数据，songUrls对象: " + songUrls);
             showSafeToast("未获取到有效的歌曲URL数据", Toast.LENGTH_SHORT);
         }
     }
@@ -677,7 +689,86 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             }
         });
 
+        // 播放列表按钮
+        if (playlistButton != null) {
+            playlistButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    showPlaylistDialog();
+                }
+            });
+        }
+
+        // 收藏按钮
+        if (favoriteButton != null) {
+            favoriteButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (songsList.isEmpty() || currentPosition < 0 || currentPosition >= songsList.size()) return;
+                    SongsList.ResultBean.SongsBean song = songsList.get(currentPosition);
+                    boolean nowFav = favoriteManager.toggleFavorite(song);
+                    updateFavoriteButton(song);
+                    showSafeToast(nowFav ? getString(R.string.favorite_added) : getString(R.string.favorite_removed), Toast.LENGTH_SHORT);
+                }
+            });
+        }
     }
+
+    private void updateFavoriteButton(SongsList.ResultBean.SongsBean song) {
+        if (favoriteButton == null || song == null) return;
+        boolean isFav = favoriteManager.isFavorite(song);
+        favoriteButton.setImageResource(isFav ? R.drawable.ic_favorite_filled : R.drawable.ic_favorite_border);
+    }
+
+    private void showPlaylistDialog() {
+        if (musicService == null) return;
+        List<SongsList.ResultBean.SongsBean> list = musicService.getSongsList();
+        if (list == null) list = new ArrayList<>();
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_playlist, null);
+        RecyclerView recycler = dialogView.findViewById(R.id.playlist_recycler);
+        recycler.setLayoutManager(new LinearLayoutManager(this));
+        PlaylistDialogAdapter adapter = new PlaylistDialogAdapter();
+        adapter.setList(list);
+        adapter.setCurrentIndex(musicService.getCurrentPosition());
+        adapter.setOnItemPlayListener(new PlaylistDialogAdapter.OnItemPlayListener() {
+            @Override
+            public void onPlay(int position) {
+                musicService.playAt(position);
+                currentPosition = position;
+                if (dialog != null && dialog.isShowing()) dialog.dismiss();
+            }
+        });
+        adapter.setOnItemRemoveListener(new PlaylistDialogAdapter.OnItemRemoveListener() {
+            @Override
+            public void onRemove(int position) {
+                musicService.removeSongAt(position);
+                songsList.clear();
+                songsList.addAll(musicService.getSongsList());
+                currentPosition = musicService.getCurrentPosition();
+                adapter.setList(musicService.getSongsList());
+                adapter.setCurrentIndex(currentPosition);
+                if (musicService.getSongsList().isEmpty() && dialog != null && dialog.isShowing()) {
+                    dialog.dismiss();
+                }
+            }
+        });
+        recycler.setAdapter(adapter);
+        dialogView.findViewById(R.id.playlist_clear).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                musicService.clearPlaylist();
+                songsList.clear();
+                currentPosition = 0;
+                if (dialog != null && dialog.isShowing()) dialog.dismiss();
+            }
+        });
+        dialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .create();
+        dialog.show();
+    }
+
+    private AlertDialog dialog;
 
     private void updateSongInfo() {
         if (songsList.isEmpty() || currentPosition < 0 || currentPosition >= songsList.size()) {
@@ -712,7 +803,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
 
         currentTime.setText("00:00");
         seekBar.setProgress(0);
-        
+        updateFavoriteButton(song);
         // 获取当前歌曲的歌词
         getCurrentSongLyric();
     }
@@ -749,7 +840,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
     private ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            Log.d(TAG, "服务连接成功");
+            LogUtil.d(TAG, "服务连接成功");
             MusicService.MusicBinder binder = (MusicService.MusicBinder) service;
             musicService = binder.getService();
             serviceBound = true;
@@ -771,7 +862,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            Log.d(TAG, "服务断开连接");
+            LogUtil.d(TAG, "服务断开连接");
             serviceBound = false;
         }
     };
@@ -812,7 +903,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        Log.d(TAG, "PlayerActivity onDestroy");
+        LogUtil.d(TAG, "PlayerActivity onDestroy");
         
         // 停止旋转动画
         stopRotateAnimation();
@@ -836,7 +927,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
     // MusicService.OnPlaybackStateChange 接口实现
     @Override
     public void onPlay() {
-        Log.d(TAG, "收到播放事件");
+        LogUtil.d(TAG, "收到播放事件");
         try {
             if (playPauseButton != null) {
                 playPauseButton.setImageResource(R.drawable.pause_active);
@@ -852,13 +943,13 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             // 开始歌词同步
             startLyricSync();
         } catch (Exception e) {
-            Log.e(TAG, "处理播放事件时出错: " + e.getMessage());
+            LogUtil.e(TAG, "处理播放事件时出错: " + e.getMessage());
         }
     }
 
     @Override
     public void onPlaybackPause() {
-        Log.d(TAG, "收到暂停事件");
+        LogUtil.d(TAG, "收到暂停事件");
         try {
             if (playPauseButton != null) {
                 playPauseButton.setImageResource(R.drawable.play_active);
@@ -873,14 +964,14 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             // 停止歌词同步
             stopLyricSync();
         } catch (Exception e) {
-            Log.e(TAG, "处理暂停事件时出错: " + e.getMessage());
+            LogUtil.e(TAG, "处理暂停事件时出错: " + e.getMessage());
         }
     }
 
     @Override
     public void onStop() {
         super.onStop();// 调用父类的onStop方法
-        Log.d(TAG, "收到停止事件");
+        LogUtil.d(TAG, "收到停止事件");
         try {
             if (playPauseButton != null) {
                 playPauseButton.setImageResource(R.drawable.play_active);
@@ -901,13 +992,13 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             // 停止歌词同步
             stopLyricSync();
         } catch (Exception e) {
-            Log.e(TAG, "处理停止事件时出错: " + e.getMessage());
+            LogUtil.e(TAG, "处理停止事件时出错: " + e.getMessage());
         }
     }
 
     @Override
     public void onCompletion() {
-        Log.d(TAG, "收到播放完成事件");
+        LogUtil.d(TAG, "收到播放完成事件");
         try {
             // 播放完成时更新界面
             updateSongInfo();
@@ -918,13 +1009,13 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             // 确保进度条更新停止
             handler.removeCallbacks(updateSeekBarRunnable);
         } catch (Exception e) {
-            Log.e(TAG, "处理播放完成事件时出错: " + e.getMessage());
+            LogUtil.e(TAG, "处理播放完成事件时出错: " + e.getMessage());
         }
     }
 
     @Override
     public void onSongChanged(SongsList.ResultBean.SongsBean song, int position) {
-        Log.d(TAG, "收到歌曲变更事件: " + song.getName() + ", 位置: " + position);
+        LogUtil.d(TAG, "收到歌曲变更事件: " + song.getName() + ", 位置: " + position);
         try {
             currentPosition = position;
             updateSongInfo();
@@ -940,20 +1031,20 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             // 获取新歌曲的歌词
             getCurrentSongLyric();
         } catch (Exception e) {
-            Log.e(TAG, "处理歌曲变更事件时出错: " + e.getMessage());
+            LogUtil.e(TAG, "处理歌曲变更事件时出错: " + e.getMessage());
         }
     }
 
     @Override
     public void onError(String error) {
-        Log.e(TAG, "收到错误事件: " + error);
+        LogUtil.e(TAG, "收到错误事件: " + error);
         try {
             showSafeToast("播放错误: " + error, Toast.LENGTH_SHORT);
             
             // 停止进度条更新
             handler.removeCallbacks(updateSeekBarRunnable);
         } catch (Exception e) {
-            Log.e(TAG, "处理错误事件时出错: " + e.getMessage());
+            LogUtil.e(TAG, "处理错误事件时出错: " + e.getMessage());
         }
     }
 }

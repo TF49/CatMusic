@@ -1,26 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:background="@color/theme"
-    android:layout_height="@dimen/navBarHeight">
+    android:layout_height="@dimen/navBarHeight"
+    android:background="@drawable/bg_nav_bar"
+    android:elevation="4dp">
+
     <ImageView
         android:id="@+id/tv_back"
-        android:layout_width="30dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="start|center_vertical"
+        android:layout_marginStart="@dimen/spacing_md"
+        android:padding="6dp"
         android:src="@mipmap/back"
-        android:layout_marginLeft="@dimen/marginSize"
-        android:layout_height="match_parent"/>
+        android:contentDescription="@null"
+        android:background="?attr/selectableItemBackgroundBorderless" />
+
     <TextView
         android:id="@+id/tv_title"
         android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:gravity="center"
-        android:textColor="@color/white"
+        android:textColor="@color/on_primary"
         android:textSize="@dimen/navBarTitleSize"
-        android:layout_height="match_parent"/>
+        android:textStyle="bold"
+        android:letterSpacing="0.02" />
+
     <ImageView
         android:id="@+id/tv_logo_header"
-        android:layout_marginRight="@dimen/marginSize"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
-        android:layout_gravity="right|center_vertical"
-        android:background="@mipmap/user"/>
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_gravity="end|center_vertical"
+        android:layout_marginEnd="@dimen/spacing_md"
+        android:src="@mipmap/user"
+        android:contentDescription="@null"
+        android:background="?attr/selectableItemBackgroundBorderless" />
 </FrameLayout>

@@ -3,7 +3,7 @@ package com.example.catmusic.ui.activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
+import com.example.catmusic.utils.LogUtil;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -19,6 +19,7 @@ import com.example.catmusic.R;
 import com.example.catmusic.adapter.SongsRecyclerViewAdapter;
 import com.example.catmusic.bean.SongUrls;
 import com.example.catmusic.bean.SongsList;
+import com.example.catmusic.utils.FavoriteManager;
 import com.google.gson.Gson;
 
 import java.io.IOException;
@@ -45,8 +46,9 @@ public class SongListActivity extends BaseActivity
     private RecyclerView songsList;     // 歌曲列表控件
     private OkHttpClient okHttpClient;  // 网络请求客户端
     private Gson gson;                  // JSON 解析工具
-    private SongsRecyclerViewAdapter songsAdapter; // 歌曲列表适配器
-    private List<SongsList.ResultBean.SongsBean> songs = new ArrayList<>(); // 歌曲数据列表
+    private SongsRecyclerViewAdapter songsAdapter;
+    private List<SongsList.ResultBean.SongsBean> songs = new ArrayList<>();
+    private FavoriteManager favoriteManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -103,8 +105,9 @@ public class SongListActivity extends BaseActivity
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
         songsList.setLayoutManager(linearLayoutManager);
 
-        // 创建适配器，传入空的歌曲列表
+        favoriteManager = new FavoriteManager(this);
         songsAdapter = new SongsRecyclerViewAdapter(this, songs);
+        songsAdapter.setFavoriteManager(favoriteManager);
         songsList.setAdapter(songsAdapter);
 
         // 为适配器添加点击监听器
@@ -148,8 +151,8 @@ public class SongListActivity extends BaseActivity
     {
 		long albumId = getIntent().getLongExtra("id", 0);
 		// 修复URL构造，正确拼接参数
-		String url = "http://192.168.1.16:3000/api/getAlbum?id=" + albumId;
-        Log.d("SongListActivity", "请求专辑歌曲列表: " + url);
+		String url = "http://192.168.1.19:3000/api/getAlbum?id=" + albumId;
+        LogUtil.d("SongListActivity", "请求专辑歌曲列表: " + url);
         Request request = new Request.Builder()
                 .url(url)
                 .build();
@@ -160,7 +163,7 @@ public class SongListActivity extends BaseActivity
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e)
             {
-                Log.e("SongListActivity", "获取歌曲列表失败: " + e.getMessage());
+                LogUtil.e("SongListActivity", "获取歌曲列表失败: " + e.getMessage());
                 runOnUiThread(new Runnable()
                 {
                     @Override
@@ -179,7 +182,7 @@ public class SongListActivity extends BaseActivity
                 {
                     try {
                         String jsonData = response.body().string();
-                        Log.d("SongListActivity", "获取歌曲列表响应: " + jsonData);
+                        LogUtil.d("SongListActivity", "获取歌曲列表响应: " + jsonData);
                         // 将jsonData（json字符串）转换成歌曲列表对象
                         SongsList songsList = gson.fromJson(jsonData, SongsList.class);
 
@@ -196,7 +199,7 @@ public class SongListActivity extends BaseActivity
                     }
                     catch (Exception e)
                     {
-                        Log.e("SongListActivity", "解析歌曲数据失败: " + e.getMessage());
+                        LogUtil.e("SongListActivity", "解析歌曲数据失败: " + e.getMessage());
                         runOnUiThread(new Runnable()
                         {
                             @Override
@@ -210,7 +213,7 @@ public class SongListActivity extends BaseActivity
                 else
                 {
                     // 添加服务器响应失败的处理
-                    Log.e("SongListActivity", "服务器响应失败: " + response.code());
+                    LogUtil.e("SongListActivity", "服务器响应失败: " + response.code());
                     runOnUiThread(new Runnable()
                     {
                         @Override
@@ -257,8 +260,8 @@ public class SongListActivity extends BaseActivity
         }
 
 		// 修正URL地址，使用与歌曲API相同的服务器地址
-		String url = "http://192.168.1.16:3000/api/getSongsUrl?" + midUrls.toString();
-        Log.d("SongListActivity", "请求歌曲URL: " + url);
+		String url = "http://192.168.1.19:3000/api/getSongsUrl?" + midUrls.toString();
+        LogUtil.d("SongListActivity", "请求歌曲URL: " + url);
 
         Request request = new Request.Builder()
                 .url(url)
@@ -269,7 +272,7 @@ public class SongListActivity extends BaseActivity
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e)
             {
-                Log.e("SongListActivity", "获取歌曲URL失败: " + e.getMessage());
+                LogUtil.e("SongListActivity", "获取歌曲URL失败: " + e.getMessage());
                 runOnUiThread(new Runnable()
                 {
                     @Override
@@ -288,7 +291,7 @@ public class SongListActivity extends BaseActivity
                     try
                     {
                         String jsonData = response.body().string();
-                        Log.d("SongListActivity", "获取歌曲URL响应: " + jsonData);
+                        LogUtil.d("SongListActivity", "获取歌曲URL响应: " + jsonData);
                         SongUrls songUrls = gson.fromJson(jsonData, SongUrls.class);
 
                         runOnUiThread(new Runnable()
@@ -302,7 +305,7 @@ public class SongListActivity extends BaseActivity
                     }
                     catch (Exception e)
                     {
-                        Log.e("SongListActivity", "解析歌曲URL数据失败: " + e.getMessage());
+                        LogUtil.e("SongListActivity", "解析歌曲URL数据失败: " + e.getMessage());
                         runOnUiThread(new Runnable()
                         {
                             @Override
@@ -315,7 +318,7 @@ public class SongListActivity extends BaseActivity
                 }
                 else
                 {
-                    Log.e("SongListActivity", "获取歌曲URL响应失败: " + response.code());
+                    LogUtil.e("SongListActivity", "获取歌曲URL响应失败: " + response.code());
                     runOnUiThread(new Runnable()
                     {
                         @Override
@@ -347,7 +350,7 @@ public class SongListActivity extends BaseActivity
                 if (mid != null && songUrls.getResult().getMap().containsKey(mid))
                 {
                     String url = songUrls.getResult().getMap().get(mid);
-                    Log.d("SongListActivity", "歌曲 MID: " + mid + ", URL: " + url);
+                    LogUtil.d("SongListActivity", "歌曲 MID: " + mid + ", URL: " + url);
                     if (url != null && !url.isEmpty())
                     {
                         song.setUrl(url); // 确保SongsBean中有setUrl方法
@@ -362,7 +365,7 @@ public class SongListActivity extends BaseActivity
         }
         else
         {
-            Log.e("SongListActivity", "未获取到有效的歌曲URL数据，songUrls对象: " + songUrls);
+            LogUtil.e("SongListActivity", "未获取到有效的歌曲URL数据，songUrls对象: " + songUrls);
             showSafeToast("未获取到有效的歌曲URL数据", Toast.LENGTH_SHORT);
         }
     }

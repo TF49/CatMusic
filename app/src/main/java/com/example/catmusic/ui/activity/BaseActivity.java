@@ -1,6 +1,6 @@
 package com.example.catmusic.ui.activity;
 
-import android.util.Log;
+import com.example.catmusic.utils.LogUtil;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -36,7 +36,7 @@ public class BaseActivity extends AppCompatActivity
                 Toast.makeText(this, message, duration).show();
             }
         } catch (Exception e) {
-            Log.w("BaseActivity", "Failed to show toast: " + e.getMessage());
+            LogUtil.w("BaseActivity", "Failed to show toast: " + e.getMessage());
         }
     }
 

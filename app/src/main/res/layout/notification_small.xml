@@ -11,7 +11,9 @@
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:src="@drawable/ic_launcher_foreground"
-        android:scaleType="centerCrop" />
+        android:scaleType="centerCrop"
+        android:background="@drawable/bg_card"
+        android:clipToOutline="true" />
 
     <LinearLayout
         android:layout_width="0dp"
@@ -46,7 +48,7 @@
         android:id="@+id/notification_prev"
         android:layout_width="36dp"
         android:layout_height="36dp"
-        android:src="@drawable/btn_bg_skip"
+        android:src="@drawable/pre_active"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         android:contentDescription="上一首" />
 
@@ -64,7 +66,7 @@
         android:id="@+id/notification_next"
         android:layout_width="36dp"
         android:layout_height="36dp"
-        android:src="@drawable/btn_bg_skip"
+        android:src="@drawable/next_active"
         android:background="?android:attr/selectableItemBackgroundBorderless"
         android:contentDescription="下一首" />
 

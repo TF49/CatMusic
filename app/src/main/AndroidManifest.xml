@@ -14,10 +14,10 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/logo"
         android:label="@string/app_name"
         android:usesCleartextTraffic="true"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/logo"
         android:supportsRtl="true"
         android:theme="@style/Theme.CatMusic"
         tools:targetApi="31">
@@ -43,6 +43,9 @@
         <activity
             android:name=".ui.activity.LyricTestActivity"
             android:exported="true" />
+        <activity
+            android:name=".ui.activity.FavoriteActivity"
+            android:exported="false" />
 
         <service
             android:name=".service.MusicService"

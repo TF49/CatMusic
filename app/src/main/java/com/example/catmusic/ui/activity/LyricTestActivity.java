@@ -1,7 +1,7 @@
 package com.example.catmusic.ui.activity;
 
 import android.os.Bundle;
-import android.util.Log;
+import com.example.catmusic.utils.LogUtil;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -46,7 +46,7 @@ public class LyricTestActivity extends AppCompatActivity {
         lyricBiz.getLyric(testMid, new LyricBiz.LyricCallback() {
             @Override
             public void onSuccess(String lyricContent) {
-                Log.d(TAG, "歌词获取成功，内容长度: " + (lyricContent != null ? lyricContent.length() : 0));
+                LogUtil.d(TAG, "歌词获取成功，内容长度: " + (lyricContent != null ? lyricContent.length() : 0));
                 runOnUiThread(() -> {
                     if (lyricContent != null && !lyricContent.isEmpty()) {
                         resultText.setText("✅ 歌词获取成功！\n内容长度: " + lyricContent.length() + " 字符\n\n" + 
@@ -59,7 +59,7 @@ public class LyricTestActivity extends AppCompatActivity {
             
             @Override
             public void onFailure(Exception e) {
-                Log.e(TAG, "歌词获取失败: " + e.getMessage());
+                LogUtil.e(TAG, "歌词获取失败: " + e.getMessage());
                 runOnUiThread(() -> {
                     resultText.setText("❌ 歌词获取失败: " + e.getMessage());
                 });

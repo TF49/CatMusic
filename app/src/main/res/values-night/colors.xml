@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 夜间模式覆盖 -->
+    <color name="background">#FF0F172A</color>
+    <color name="surface">#FF1E293B</color>
+    <color name="surface_variant">#FF334155</color>
+    <color name="card_background">#FF1E293B</color>
+    <color name="text_primary">#FFF1F5F9</color>
+    <color name="text_secondary">#FF94A3B8</color>
+    <color name="text_tertiary">#FF64748B</color>
+    <color name="outline">#FF334155</color>
+    <color name="outline_variant">#FF1E293B</color>
+    </resources>

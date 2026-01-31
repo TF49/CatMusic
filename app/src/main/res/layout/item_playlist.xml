@@ -8,20 +8,7 @@
     android:paddingEnd="@dimen/spacing_md"
     android:paddingTop="@dimen/spacing_sm"
     android:paddingBottom="@dimen/spacing_sm"
-    android:layout_marginStart="@dimen/spacing_md"
-    android:layout_marginEnd="@dimen/spacing_md"
-    android:layout_marginTop="@dimen/spacing_md"
-    android:layout_marginBottom="@dimen/spacing_md"
-    android:background="@drawable/bg_card"
-    android:minHeight="@dimen/itemHeight">
-
-    <ImageView
-        android:id="@+id/song_icon"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginEnd="@dimen/spacing_md"
-        android:scaleType="centerCrop"
-        android:background="@drawable/bg_card" />
+    android:background="?attr/selectableItemBackground">
 
     <LinearLayout
         android:layout_width="0dp"
@@ -32,35 +19,33 @@
         android:gravity="center_vertical">
 
         <TextView
-            android:id="@+id/song_title"
+            android:id="@+id/playlist_item_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="歌曲标题"
-            android:textColor="@color/text_primary"
             android:textSize="@dimen/T2"
-            android:textStyle="bold"
+            android:textColor="@color/text_primary"
             android:maxLines="1"
-            android:ellipsize="end" />
+            android:ellipsize="end"
+            android:text="歌曲名" />
 
         <TextView
-            android:id="@+id/song_artist"
+            android:id="@+id/playlist_item_artist"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_xs"
-            android:text="歌手"
-            android:textColor="@color/text_secondary"
             android:textSize="@dimen/T3"
+            android:textColor="@color/text_secondary"
             android:maxLines="1"
-            android:ellipsize="end" />
+            android:ellipsize="end"
+            android:text="歌手" />
     </LinearLayout>
 
     <ImageView
-        android:id="@+id/song_favorite"
+        android:id="@+id/playlist_item_remove"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        android:layout_gravity="center_vertical"
         android:padding="@dimen/spacing_sm"
-        android:contentDescription="@string/desc_favorite"
-        android:src="@drawable/ic_favorite_border"
+        android:contentDescription="@string/remove_from_list"
+        android:src="@drawable/ic_remove"
         android:background="?attr/selectableItemBackgroundBorderless" />
 </LinearLayout>

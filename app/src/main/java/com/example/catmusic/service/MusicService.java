@@ -11,7 +11,7 @@ import android.media.MediaPlayer;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
-import android.util.Log;
+import com.example.catmusic.utils.LogUtil;
 import android.widget.RemoteViews;
 
 import androidx.core.app.NotificationCompat;
@@ -63,7 +63,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.d(TAG, "MusicService onCreate");
+        LogUtil.d(TAG, "MusicService onCreate");
         createNotificationChannel();
         initializeMediaPlayer();
         initializeAudioFocus();
@@ -71,19 +71,19 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 
     @Override
     public IBinder onBind(Intent intent) {
-        Log.d(TAG, "MusicService onBind");
+        LogUtil.d(TAG, "MusicService onBind");
         return binder;
     }
 
     @Override
     public boolean onUnbind(Intent intent) {
-        Log.d(TAG, "MusicService onUnbind");
+        LogUtil.d(TAG, "MusicService onUnbind");
         return super.onUnbind(intent);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(TAG, "MusicService onStartCommand");
+        LogUtil.d(TAG, "MusicService onStartCommand");
         
         // 处理通知按钮点击事件
         if (intent != null && intent.getAction() != null) {
@@ -113,7 +113,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 
     @Override
     public void onDestroy() {
-        Log.d(TAG, "MusicService onDestroy");
+        LogUtil.d(TAG, "MusicService onDestroy");
         stopForeground(true);
         
         // 放弃音频焦点
@@ -205,7 +205,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 
             return builder.build();
         } catch (Exception e) {
-            Log.e(TAG, "创建通知时出错: " + e.getMessage());
+            LogUtil.e(TAG, "创建通知时出错: " + e.getMessage());
             // 返回一个简单的通知作为后备
             return new NotificationCompat.Builder(this, CHANNEL_ID)
                     .setSmallIcon(R.drawable.ic_launcher_foreground)
@@ -309,7 +309,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
      */
     public void setSongsList(List<SongsList.ResultBean.SongsBean> songsList) {
         this.songsList = songsList != null ? songsList : new ArrayList<>();
-        Log.d(TAG, "设置歌曲列表，共 " + this.songsList.size() + " 首歌曲");
+        LogUtil.d(TAG, "设置歌曲列表，共 " + this.songsList.size() + " 首歌曲");
     }
 
     /**
@@ -318,7 +318,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     public void setCurrentPosition(int position) {
         if (position >= 0 && position < songsList.size()) {
             this.currentPosition = position;
-            Log.d(TAG, "设置当前播放位置: " + position);
+            LogUtil.d(TAG, "设置当前播放位置: " + position);
         }
     }
 
@@ -330,7 +330,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
         playbackState = PlaybackState.PLAYING;
         
         if (songsList.isEmpty()) {
-            Log.e(TAG, "歌曲列表为空，无法播放");
+            LogUtil.e(TAG, "歌曲列表为空，无法播放");
             playbackState = PlaybackState.ERROR;
             if (onPlaybackStateChange != null) {
                 onPlaybackStateChange.onError("歌曲列表为空，无法播放");
@@ -339,7 +339,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
         }
 
         if (currentPosition < 0 || currentPosition >= songsList.size()) {
-            Log.e(TAG, "当前播放位置无效: " + currentPosition);
+            LogUtil.e(TAG, "当前播放位置无效: " + currentPosition);
             playbackState = PlaybackState.ERROR;
             if (onPlaybackStateChange != null) {
                 onPlaybackStateChange.onError("当前播放位置无效: " + currentPosition);
@@ -351,7 +351,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
         String url = song.getUrl();
 
         if (url == null || url.isEmpty()) {
-            Log.e(TAG, "歌曲URL为空，无法播放");
+            LogUtil.e(TAG, "歌曲URL为空，无法播放");
             playbackState = PlaybackState.ERROR;
             if (onPlaybackStateChange != null) {
                 onPlaybackStateChange.onError("歌曲URL为空，无法播放");
@@ -360,11 +360,11 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
         }
 
         try {
-            Log.d(TAG, "开始播放歌曲: " + song.getName() + ", URL: " + url);
+            LogUtil.d(TAG, "开始播放歌曲: " + song.getName() + ", URL: " + url);
             
             // 请求音频焦点
             if (!requestAudioFocus()) {
-                Log.w(TAG, "无法获取音频焦点");
+                LogUtil.w(TAG, "无法获取音频焦点");
             }
             
             // 重置MediaPlayer
@@ -388,19 +388,19 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
                 onPlaybackStateChange.onSongChanged(song, currentPosition);
             }
         } catch (IOException e) {
-            Log.e(TAG, "播放音乐时出错: " + e.getMessage());
+            LogUtil.e(TAG, "播放音乐时出错: " + e.getMessage());
             playbackState = PlaybackState.ERROR;
             if (onPlaybackStateChange != null) {
                 onPlaybackStateChange.onError("播放音乐时出错: " + e.getMessage());
             }
         } catch (IllegalStateException e) {
-            Log.e(TAG, "MediaPlayer状态错误: " + e.getMessage());
+            LogUtil.e(TAG, "MediaPlayer状态错误: " + e.getMessage());
             playbackState = PlaybackState.ERROR;
             if (onPlaybackStateChange != null) {
                 onPlaybackStateChange.onError("MediaPlayer状态错误: " + e.getMessage());
             }
         } catch (Exception e) {
-            Log.e(TAG, "未知错误: " + e.getMessage());
+            LogUtil.e(TAG, "未知错误: " + e.getMessage());
             playbackState = PlaybackState.ERROR;
             if (onPlaybackStateChange != null) {
                 onPlaybackStateChange.onError("未知错误: " + e.getMessage());
@@ -417,7 +417,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
                 mediaPlayer.pause();
                 isPaused = true;
                 playbackState = PlaybackState.PAUSED;
-                Log.d(TAG, "音乐已暂停");
+                LogUtil.d(TAG, "音乐已暂停");
                 
                 // 更新通知
                 updateNotification();
@@ -428,7 +428,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
             }
             }
         } catch (IllegalStateException e) {
-            Log.e(TAG, "暂停音乐时出错: " + e.getMessage());
+            LogUtil.e(TAG, "暂停音乐时出错: " + e.getMessage());
             playbackState = PlaybackState.ERROR;
             if (onPlaybackStateChange != null) {
                 onPlaybackStateChange.onError("暂停音乐时出错: " + e.getMessage());
@@ -445,7 +445,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
                 mediaPlayer.start();
                 isPaused = false;
                 playbackState = PlaybackState.PLAYING;
-                Log.d(TAG, "音乐继续播放");
+                LogUtil.d(TAG, "音乐继续播放");
                 
                 // 更新通知
                 updateNotification();
@@ -456,7 +456,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
                 }
             }
         } catch (IllegalStateException e) {
-            Log.e(TAG, "继续播放音乐时出错: " + e.getMessage());
+            LogUtil.e(TAG, "继续播放音乐时出错: " + e.getMessage());
             playbackState = PlaybackState.ERROR;
             if (onPlaybackStateChange != null) {
                 onPlaybackStateChange.onError("继续播放音乐时出错: " + e.getMessage());
@@ -474,7 +474,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
                 mediaPlayer.reset();
                 isPaused = false;
                 playbackState = PlaybackState.STOPPED;
-                Log.d(TAG, "音乐已停止");
+                LogUtil.d(TAG, "音乐已停止");
                 
                 // 更新通知
                 updateNotification();
@@ -485,7 +485,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
                 }
             }
         } catch (IllegalStateException e) {
-            Log.e(TAG, "停止音乐时出错: " + e.getMessage());
+            LogUtil.e(TAG, "停止音乐时出错: " + e.getMessage());
             playbackState = PlaybackState.ERROR;
             if (onPlaybackStateChange != null) {
                 onPlaybackStateChange.onError("停止音乐时出错: " + e.getMessage());
@@ -498,7 +498,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
      */
     public void playNext() {
         if (songsList.isEmpty()) {
-            Log.w(TAG, "歌曲列表为空，无法播放下一首");
+            LogUtil.w(TAG, "歌曲列表为空，无法播放下一首");
             if (onPlaybackStateChange != null) {
                 onPlaybackStateChange.onError("歌曲列表为空，无法播放下一首");
             }
@@ -511,24 +511,24 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
             switch (playMode) {
                 case MODE_LOOP_ALL:
                     currentPosition = (currentPosition + 1) % songsList.size();
-                    Log.d(TAG, "列表循环模式，下一首位置: " + currentPosition);
+                    LogUtil.d(TAG, "列表循环模式，下一首位置: " + currentPosition);
                     break;
                 case MODE_LOOP_ONE:
                     // 单曲循环，保持当前位置不变
-                    Log.d(TAG, "单曲循环模式，保持当前位置: " + currentPosition);
+                    LogUtil.d(TAG, "单曲循环模式，保持当前位置: " + currentPosition);
                     break;
                 case MODE_RANDOM:
                     int newPosition = new Random().nextInt(songsList.size());
                     currentPosition = newPosition;
-                    Log.d(TAG, "随机播放模式，随机位置: " + currentPosition);
+                    LogUtil.d(TAG, "随机播放模式，随机位置: " + currentPosition);
                     break;
                 default:
                     currentPosition = (currentPosition + 1) % songsList.size();
-                    Log.d(TAG, "默认列表循环模式，下一首位置: " + currentPosition);
+                    LogUtil.d(TAG, "默认列表循环模式，下一首位置: " + currentPosition);
                     break;
             }
 
-            Log.d(TAG, "播放下一首，位置: " + currentPosition + " (之前: " + previousPosition + ")");
+            LogUtil.d(TAG, "播放下一首，位置: " + currentPosition + " (之前: " + previousPosition + ")");
             
             // 如果位置改变或处于单曲循环模式，则播放新歌曲
             if (currentPosition != previousPosition || playMode == MODE_LOOP_ONE) {
@@ -540,7 +540,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
                 }
             }
         } catch (Exception e) {
-            Log.e(TAG, "播放下一首时出错: " + e.getMessage());
+            LogUtil.e(TAG, "播放下一首时出错: " + e.getMessage());
             if (onPlaybackStateChange != null) {
                 onPlaybackStateChange.onError("播放下一首时出错: " + e.getMessage());
             }
@@ -552,7 +552,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
      */
     public void playPrev() {
         if (songsList.isEmpty()) {
-            Log.w(TAG, "歌曲列表为空，无法播放上一首");
+            LogUtil.w(TAG, "歌曲列表为空，无法播放上一首");
             if (onPlaybackStateChange != null) {
                 onPlaybackStateChange.onError("歌曲列表为空，无法播放上一首");
             }
@@ -565,24 +565,24 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
             switch (playMode) {
                 case MODE_LOOP_ALL:
                     currentPosition = (currentPosition - 1 + songsList.size()) % songsList.size();
-                    Log.d(TAG, "列表循环模式，上一首位置: " + currentPosition);
+                    LogUtil.d(TAG, "列表循环模式，上一首位置: " + currentPosition);
                     break;
                 case MODE_LOOP_ONE:
                     // 单曲循环，保持当前位置不变
-                    Log.d(TAG, "单曲循环模式，保持当前位置: " + currentPosition);
+                    LogUtil.d(TAG, "单曲循环模式，保持当前位置: " + currentPosition);
                     break;
                 case MODE_RANDOM:
                     int newPosition = new Random().nextInt(songsList.size());
                     currentPosition = newPosition;
-                    Log.d(TAG, "随机播放模式，随机位置: " + currentPosition);
+                    LogUtil.d(TAG, "随机播放模式，随机位置: " + currentPosition);
                     break;
                 default:
                     currentPosition = (currentPosition - 1 + songsList.size()) % songsList.size();
-                    Log.d(TAG, "默认列表循环模式，上一首位置: " + currentPosition);
+                    LogUtil.d(TAG, "默认列表循环模式，上一首位置: " + currentPosition);
                     break;
             }
 
-            Log.d(TAG, "播放上一首，位置: " + currentPosition + " (之前: " + previousPosition + ")");
+            LogUtil.d(TAG, "播放上一首，位置: " + currentPosition + " (之前: " + previousPosition + ")");
             
             // 如果位置改变或处于单曲循环模式，则播放新歌曲
             if (currentPosition != previousPosition || playMode == MODE_LOOP_ONE) {
@@ -594,7 +594,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
                 }
             }
         } catch (Exception e) {
-            Log.e(TAG, "播放上一首时出错: " + e.getMessage());
+            LogUtil.e(TAG, "播放上一首时出错: " + e.getMessage());
             if (onPlaybackStateChange != null) {
                 onPlaybackStateChange.onError("播放上一首时出错: " + e.getMessage());
             }
@@ -616,7 +616,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     public void setPlayMode(int mode) {
         if (mode >= MODE_LOOP_ALL && mode <= MODE_RANDOM) {
             this.playMode = mode;
-            Log.d(TAG, "设置播放模式: " + mode);
+            LogUtil.d(TAG, "设置播放模式: " + mode);
         }
     }
 
@@ -676,6 +676,58 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     }
 
     /**
+     * 从播放列表中移除指定位置的歌曲
+     * @param index 要移除的索引
+     * @return 是否移除成功；若移除后列表为空会停止播放
+     */
+    public boolean removeSongAt(int index) {
+        if (songsList.isEmpty() || index < 0 || index >= songsList.size()) {
+            return false;
+        }
+        songsList.remove(index);
+        if (songsList.isEmpty()) {
+            stopMusic();
+            if (onPlaybackStateChange != null) {
+                onPlaybackStateChange.onError("播放列表已清空");
+            }
+            return true;
+        }
+        if (currentPosition >= songsList.size()) {
+            currentPosition = songsList.size() - 1;
+        } else if (index < currentPosition) {
+            currentPosition--;
+        }
+        if (index == currentPosition) {
+            playMusic();
+        }
+        return true;
+    }
+
+    /**
+     * 清空播放列表并停止播放
+     */
+    public void clearPlaylist() {
+        songsList.clear();
+        currentPosition = 0;
+        stopMusic();
+        if (onPlaybackStateChange != null) {
+            onPlaybackStateChange.onError("播放列表已清空");
+        }
+    }
+
+    /**
+     * 切换到指定索引并播放
+     * @param index 目标索引
+     */
+    public void playAt(int index) {
+        if (songsList.isEmpty() || index < 0 || index >= songsList.size()) {
+            return;
+        }
+        currentPosition = index;
+        playMusic();
+    }
+
+    /**
      * 设置播放状态变化回调
      */
     public void setOnPlaybackStateChange(OnPlaybackStateChange listener) {
@@ -690,14 +742,14 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
             NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
             notificationManager.notify(NOTIFICATION_ID, createNotification());
         } catch (Exception e) {
-            Log.e(TAG, "更新通知时出错: " + e.getMessage());
+            LogUtil.e(TAG, "更新通知时出错: " + e.getMessage());
         }
     }
 
     // MediaPlayer.OnPreparedListener 实现
     @Override
     public void onPrepared(MediaPlayer mp) {
-        Log.d(TAG, "MediaPlayer准备完成，开始播放");
+        LogUtil.d(TAG, "MediaPlayer准备完成，开始播放");
         mediaPlayer.start();
         isPaused = false;
         playbackState = PlaybackState.PLAYING;
@@ -711,7 +763,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     // MediaPlayer.OnCompletionListener 实现
     @Override
     public void onCompletion(MediaPlayer mp) {
-        Log.d(TAG, "歌曲播放完成");
+        LogUtil.d(TAG, "歌曲播放完成");
         playbackState = PlaybackState.IDLE;
         
         // 根据播放模式处理播放完成事件
@@ -736,7 +788,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     // MediaPlayer.OnErrorListener 实现
     @Override
     public boolean onError(MediaPlayer mp, int what, int extra) {
-        Log.e(TAG, "MediaPlayer错误 - what: " + what + ", extra: " + extra);
+        LogUtil.e(TAG, "MediaPlayer错误 - what: " + what + ", extra: " + extra);
         playbackState = PlaybackState.ERROR;
         
         // 通知Activity发生错误

@@ -1,24 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- 导航 -->
     <dimen name="navBarHeight">56dp</dimen>
+    <dimen name="navBarTitleSize">18sp</dimen>
+
+    <!-- 间距系统 (8dp 网格) -->
+    <dimen name="spacing_xs">4dp</dimen>
+    <dimen name="spacing_sm">8dp</dimen>
+    <dimen name="spacing_md">16dp</dimen>
+    <dimen name="spacing_lg">24dp</dimen>
+    <dimen name="spacing_xl">32dp</dimen>
     <dimen name="marginSize">16dp</dimen>
-    <dimen name="navBarTitleSize">22sp</dimen>
+    <dimen name="marginTabSize">4dp</dimen>
+    <dimen name="albumMarginSize">8dp</dimen>
+
+    <!-- 圆角 -->
+    <dimen name="radius_sm">8dp</dimen>
+    <dimen name="radius_md">12dp</dimen>
+    <dimen name="radius_lg">16dp</dimen>
+    <dimen name="radius_xl">24dp</dimen>
+    <dimen name="radius_pill">28dp</dimen>
+    <dimen name="radius">12dp</dimen>
+
+    <!-- 文字 -->
     <dimen name="titleSize">18sp</dimen>
     <dimen name="infoSize">14sp</dimen>
-    <dimen name="inputViewHeight">44dp</dimen>
-    <dimen name="btnHeight">44dp</dimen>
-    <dimen name="radius">5dp</dimen>
-    <dimen name="itemHeight">44dp</dimen>
-    <dimen name="marginTabSize">4dp</dimen>
-    <dimen name="albumMarginSize">4dp</dimen>
-    <dimen name="playNumImgSize">18dp</dimen>
-    <dimen name="itemIconSize">56dp</dimen>
-    <dimen name="itemPlaySize">36dp</dimen>
-    <dimen name="discTopSize">90dp</dimen>
-    <dimen name="playMusicIconSize">210dp</dimen>
-    <dimen name="T1">24sp</dimen>
+    <dimen name="T1">22sp</dimen>
     <dimen name="T2">16sp</dimen>
     <dimen name="T3">14sp</dimen>
+    <dimen name="caption">12sp</dimen>
+
+    <!-- 控件 -->
+    <dimen name="inputViewHeight">48dp</dimen>
+    <dimen name="btnHeight">48dp</dimen>
+    <dimen name="itemHeight">56dp</dimen>
+    <dimen name="itemIconSize">56dp</dimen>
+    <dimen name="itemPlaySize">40dp</dimen>
+    <dimen name="playNumImgSize">18dp</dimen>
     <dimen name="dot_size">4dp</dimen>
     <dimen name="dot_dis">4dp</dimen>
+
+    <!-- 播放器 -->
+    <dimen name="discTopSize">90dp</dimen>
+    <dimen name="playMusicIconSize">240dp</dimen>
+    <dimen name="album_art_size">280dp</dimen>
 </resources>

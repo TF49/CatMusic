@@ -1,6 +1,6 @@
 package com.example.catmusic.biz;
 
-import android.util.Log;
+import com.example.catmusic.utils.LogUtil;
 
 import com.example.catmusic.Config;
 
@@ -44,7 +44,7 @@ public class LyricBiz {
 
         // 使用正确的配置常量和URL构建方式
         String url = Config.BASE_URL + "api/getLyric?mid=" + mid;
-        Log.d(TAG, "请求歌词URL: " + url);
+        LogUtil.d(TAG, "请求歌词URL: " + url);
 
         Request request = new Request.Builder()
                 .url(url)
@@ -53,7 +53,7 @@ public class LyricBiz {
         okHttpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                Log.e(TAG, "获取歌词失败: " + e.getMessage());
+                LogUtil.e(TAG, "获取歌词失败: " + e.getMessage());
                 callback.onFailure(e);
             }
 
@@ -61,13 +61,13 @@ public class LyricBiz {
             public void onResponse(Call call, Response response) throws IOException {
                 if (!response.isSuccessful()) {
                     String errorMsg = "获取歌词失败，响应码: " + response.code();
-                    Log.e(TAG, errorMsg);
+                    LogUtil.e(TAG, errorMsg);
                     callback.onFailure(new IOException(errorMsg));
                     return;
                 }
 
                 String jsonString = response.body().string();
-                Log.d(TAG, "获取歌词成功，原始内容长度: " + jsonString.length());
+                LogUtil.d(TAG, "获取歌词成功，原始内容长度: " + jsonString.length());
 
                 try {
                     JSONObject root = new JSONObject(jsonString);
@@ -90,10 +90,10 @@ public class LyricBiz {
                         return;
                     }
 
-                    Log.d(TAG, "解析歌词成功，歌词长度: " + lyricContent.length());
+                    LogUtil.d(TAG, "解析歌词成功，歌词长度: " + lyricContent.length());
                     callback.onSuccess(lyricContent);
                 } catch (JSONException e) {
-                    Log.e(TAG, "解析歌词JSON失败: " + e.getMessage());
+                    LogUtil.e(TAG, "解析歌词JSON失败: " + e.getMessage());
                     callback.onFailure(e);
                 }
             }

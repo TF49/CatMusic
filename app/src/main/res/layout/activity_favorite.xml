@@ -5,50 +5,37 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/background"
-    tools:context=".ui.activity.SongListActivity">
+    tools:context=".ui.activity.FavoriteActivity">
 
     <include layout="@layout/tab_bar" />
 
-    <ImageView
-        android:id="@+id/ablums_icon"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
-        android:layout_gravity="center"
-        android:layout_marginTop="@dimen/spacing_lg"
-        android:scaleType="centerCrop"
-        android:background="@drawable/bg_card"
-        android:elevation="4dp"
-        android:clipToOutline="true" />
-
     <TextView
-        android:id="@+id/ablums_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/spacing_md"
         android:layout_marginStart="@dimen/spacing_md"
         android:layout_marginEnd="@dimen/spacing_md"
-        android:text="专辑标题"
+        android:layout_marginTop="@dimen/spacing_md"
+        android:layout_marginBottom="@dimen/spacing_xs"
+        android:text="@string/my_favorites"
         android:textColor="@color/text_primary"
         android:textSize="@dimen/titleSize"
         android:textStyle="bold"
-        android:gravity="center" />
+        android:letterSpacing="0.02" />
 
     <TextView
+        android:id="@+id/favorite_count"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/spacing_md"
-        android:layout_marginTop="@dimen/spacing_lg"
+        android:layout_marginEnd="@dimen/spacing_md"
         android:layout_marginBottom="@dimen/spacing_sm"
-        android:text="歌曲列表"
-        android:textColor="@color/text_primary"
-        android:textSize="@dimen/T2"
-        android:textStyle="bold" />
+        android:textColor="@color/text_secondary"
+        android:textSize="@dimen/T3" />
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/albums_list"
+        android:id="@+id/favorite_list"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:clipToPadding="false"
         android:paddingStart="@dimen/spacing_md"
         android:paddingEnd="@dimen/spacing_md"

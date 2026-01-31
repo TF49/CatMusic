@@ -4,30 +4,32 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.activity.WelcomeActivity"
-    android:background="@color/theme">
+    android:background="@drawable/bg_welcome_gradient"
+    tools:context=".ui.activity.WelcomeActivity">
 
     <ImageView
-        android:layout_gravity="center"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:contentDescription="@string/app_name"
         android:src="@mipmap/logo" />
 
     <Button
         android:id="@+id/skip_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="14sp"
-        android:layout_gravity="right"
-        android:background="@drawable/btn_bg_skip"
-        android:layout_marginRight="20dp"
-        android:layout_marginTop="20dp"
-        android:paddingLeft="12dp"
-        android:paddingRight="12dp"
-        android:paddingTop="6dp"
-        android:paddingBottom="6dp"
+        android:layout_gravity="end|top"
+        android:layout_marginTop="@dimen/spacing_lg"
+        android:layout_marginEnd="@dimen/spacing_lg"
         android:minHeight="0dp"
         android:minWidth="0dp"
-        android:textColor="@color/black"
-        android:text="跳过" />
+        android:background="@drawable/btn_bg_skip"
+        android:paddingStart="@dimen/spacing_md"
+        android:paddingEnd="@dimen/spacing_md"
+        android:paddingTop="@dimen/spacing_sm"
+        android:paddingBottom="@dimen/spacing_sm"
+        android:text="跳过"
+        android:textColor="@color/white"
+        android:textSize="@dimen/caption"
+        android:textAllCaps="false" />
 </FrameLayout>

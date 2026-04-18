@@ -10,6 +10,10 @@ import java.util.List;
  * 用于存储和管理歌词数据
  */
 public class Lyric {
+    public enum SyncType {
+        PRECISE_LRC,
+        PLAIN_TEXT
+    }
     
     /**
      * 歌词行数据模型
@@ -49,6 +53,7 @@ public class Lyric {
     }
     
     private List<LyricLine> lyricLines;
+    private SyncType syncType = SyncType.PRECISE_LRC;
     
     public Lyric() {
         this.lyricLines = new ArrayList<>();
@@ -56,6 +61,12 @@ public class Lyric {
     
     public Lyric(List<LyricLine> lyricLines) {
         this.lyricLines = lyricLines;
+        sortLyricLines();
+    }
+
+    public Lyric(List<LyricLine> lyricLines, SyncType syncType) {
+        this.lyricLines = lyricLines;
+        this.syncType = syncType != null ? syncType : SyncType.PRECISE_LRC;
         sortLyricLines();
     }
     
@@ -88,6 +99,18 @@ public class Lyric {
     public void setLyricLines(List<LyricLine> lyricLines) {
         this.lyricLines = lyricLines;
         sortLyricLines();
+    }
+
+    public SyncType getSyncType() {
+        return syncType;
+    }
+
+    public void setSyncType(SyncType syncType) {
+        this.syncType = syncType != null ? syncType : SyncType.PRECISE_LRC;
+    }
+
+    public boolean isPrecise() {
+        return syncType == SyncType.PRECISE_LRC;
     }
     
     /**

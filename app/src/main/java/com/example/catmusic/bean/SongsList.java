@@ -69,6 +69,10 @@ public class SongsList
             private int duration;
             private String pic;
             private String album;
+            private boolean isLocal;
+            private String localAudioUri;
+            private String localLyricUri;
+            private boolean lyricPrecise = true;
 
             public int getId()
             {
@@ -139,6 +143,38 @@ public class SongsList
 
             public void setAlbum(String album) {
                 this.album = album;
+            }
+
+            public boolean isLocal() {
+                return isLocal;
+            }
+
+            public void setLocal(boolean local) {
+                isLocal = local;
+            }
+
+            public String getLocalAudioUri() {
+                return localAudioUri;
+            }
+
+            public void setLocalAudioUri(String localAudioUri) {
+                this.localAudioUri = localAudioUri;
+            }
+
+            public String getLocalLyricUri() {
+                return localLyricUri;
+            }
+
+            public void setLocalLyricUri(String localLyricUri) {
+                this.localLyricUri = localLyricUri;
+            }
+
+            public boolean isLyricPrecise() {
+                return lyricPrecise;
+            }
+
+            public void setLyricPrecise(boolean lyricPrecise) {
+                this.lyricPrecise = lyricPrecise;
             }
         }
     }

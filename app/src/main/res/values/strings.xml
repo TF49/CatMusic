@@ -7,4 +7,6 @@
     <string name="clear_playlist">清空列表</string>
     <string name="favorite_added">已加入收藏</string>
     <string name="favorite_removed">已取消收藏</string>
+    <string name="import_local_music">导入本地歌曲</string>
+    <string name="local_music_label">本地导入</string>
 </resources>

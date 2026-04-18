@@ -6,6 +6,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -13,230 +14,196 @@ import java.util.regex.Pattern;
 
 /**
  * 歌词解析工具类
- * 用于解析LRC格式的歌词文件
+ * 用于解析 LRC 格式歌词，同时兼容纯文本歌词的弱同步展示。
  */
 public class LyricParser {
-    
-    // LRC歌词时间戳正则表达式，匹配格式如：[mm:ss.xx] 或 [mm:ss]
-    private static final Pattern TIME_PATTERN = Pattern.compile("\\[(\\d+):(\\d+)(\\.\\d+)?\\](.*)");
-    
+
+    private static final Pattern TIME_TAG_PATTERN = Pattern.compile("\\[(\\d+):(\\d+)(?:\\.(\\d{1,3}))?\\]");
+    private static final Pattern LYRIC_TAG_PATTERN = Pattern.compile("\\[(ti|ar|al|by|offset):.*?\\]", Pattern.CASE_INSENSITIVE);
+
+    private LyricParser() {
+    }
+
     /**
      * 解析歌词字符串
-     * 
+     *
      * @param lyricString 歌词字符串内容
-     * @return 解析后的Lyric对象，如果解析失败返回null
+     * @return 解析后的 Lyric 对象，如果解析失败返回 null
      */
     public static Lyric parseLyric(String lyricString) {
         if (lyricString == null || lyricString.trim().isEmpty()) {
             return null;
         }
-        
-        List<Lyric.LyricLine> lyricLines = new ArrayList<>();
-        try {
-            // 先判断是否为标准 LRC（带时间戳）的歌词
-            boolean hasTimeTag = TIME_PATTERN.matcher(lyricString).find();
 
-            // 如果没有时间戳，则按纯文本歌词处理：按行拆分，保留换行结构
-            if (!hasTimeTag) {
-                String[] lines = lyricString.split("\\r?\\n");
-                long time = 0L;
-                long step = 3000L; // 给每行一个递增的虚拟时间戳，便于滚动
+        String normalized = lyricString.replace("\r\n", "\n").replace('\r', '\n');
+        String[] rawLines = normalized.split("\n");
 
-                for (String line : lines) {
-                    String content = line.trim();
-                    if (content.isEmpty()) continue;
-                    lyricLines.add(new Lyric.LyricLine(time, content));
-                    time += step;
-                }
+        List<Lyric.LyricLine> preciseLines = parseTimedLines(rawLines);
+        if (!preciseLines.isEmpty()) {
+            return new Lyric(preciseLines, Lyric.SyncType.PRECISE_LRC);
+        }
 
-                if (lyricLines.isEmpty()) {
-                    return null;
-                }
-
-                return new Lyric(lyricLines);
-            }
-
-            // 以下为带时间戳的 LRC 解析逻辑
-            // 先清理歌词字符串，移除所有换行符和转义换行符，方便用正则整体解析
-            String cleanedLyric = lyricString.replaceAll("\\n", " ").replaceAll("\\\\n", " ");
-            
-            // 处理歌词内容[时间戳]格式
-            // 1. 先提取所有时间戳和对应的歌词内容
-            // 匹配格式：歌词内容[mm:ss.xx]
-            Pattern pattern = Pattern.compile("([\\s\\S]*?)\\[(\\d+):(\\d+)(\\.\\d+)?\\]");
-            Matcher matcher = pattern.matcher(cleanedLyric);
-            
-            while (matcher.find()) {
-                try {
-                    // 获取歌词内容，去除首尾空格
-                    String content = matcher.group(1).trim();
-                    
-                    // 跳过空内容
-                    if (content.isEmpty()) {
-                        continue;
-                    }
-                    
-                    // 解析分钟
-                    int minutes = Integer.parseInt(matcher.group(2));
-                    // 解析秒
-                    int seconds = Integer.parseInt(matcher.group(3));
-                    // 解析毫秒部分（可选）
-                    int milliseconds = 0;
-                    if (matcher.group(4) != null) {
-                        String millStr = matcher.group(4).substring(1); // 去掉小数点
-                        if (millStr.length() == 2) {
-                            milliseconds = Integer.parseInt(millStr) * 10; // .20 -> 200毫秒
-                        } else if (millStr.length() >= 3) {
-                            milliseconds = Integer.parseInt(millStr.substring(0, 3));
-                        }
-                    }
-                    
-                    // 计算总毫秒数
-                    long totalMilliseconds = minutes * 60 * 1000 + seconds * 1000 + milliseconds;
-                    
-                    lyricLines.add(new Lyric.LyricLine(totalMilliseconds, content));
-                    
-                } catch (NumberFormatException e) {
-                    // 忽略格式错误的行
-                    continue;
-                }
-            }
-            
-            // 如果没有解析到有效的歌词行，尝试处理[时间戳]歌词内容格式
-            if (lyricLines.isEmpty()) {
-                // 匹配格式：[mm:ss.xx]歌词内容
-                pattern = Pattern.compile("\\[(\\d+):(\\d+)(\\.\\d+)?\\]([\\s\\S]*?)(?=\\[|$)");
-                matcher = pattern.matcher(cleanedLyric);
-                
-                while (matcher.find()) {
-                    try {
-                        // 解析分钟
-                        int minutes = Integer.parseInt(matcher.group(1));
-                        // 解析秒
-                        int seconds = Integer.parseInt(matcher.group(2));
-                        // 解析毫秒部分（可选）
-                        int milliseconds = 0;
-                        if (matcher.group(3) != null) {
-                            String millStr = matcher.group(3).substring(1); // 去掉小数点
-                            if (millStr.length() == 2) {
-                                milliseconds = Integer.parseInt(millStr) * 10; // .20 -> 200毫秒
-                            } else if (millStr.length() >= 3) {
-                                milliseconds = Integer.parseInt(millStr.substring(0, 3));
-                            }
-                        }
-                        
-                        // 计算总毫秒数
-                        long totalMilliseconds = minutes * 60 * 1000 + seconds * 1000 + milliseconds;
-                        
-                        // 获取歌词内容，去除首尾空格
-                        String content = matcher.group(4).trim();
-                        
-                        // 跳过空内容或纯时间戳行
-                        if (!content.isEmpty()) {
-                            lyricLines.add(new Lyric.LyricLine(totalMilliseconds, content));
-                        }
-                        
-                    } catch (NumberFormatException e) {
-                        // 忽略格式错误的行
-                        continue;
-                    }
-                }
-            }
-            
-            // 如果仍然没有解析到有效的歌词行，尝试直接使用原始歌词内容
-            if (lyricLines.isEmpty()) {
-                // 直接将整个歌词作为一行，时间戳为0，去除所有时间戳
-                String content = cleanedLyric.replaceAll("\\[.*?\\]", "").trim();
-                if (!content.isEmpty()) {
-                    lyricLines.add(new Lyric.LyricLine(0, content));
-                } else {
-                    return null;
-                }
-            }
-            
-            return new Lyric(lyricLines);
-            
-        } catch (Exception e) {
-            e.printStackTrace();
+        List<Lyric.LyricLine> plainLines = parsePlainTextLines(rawLines);
+        if (plainLines.isEmpty()) {
             return null;
         }
+        return new Lyric(plainLines, Lyric.SyncType.PLAIN_TEXT);
     }
-    
+
+    private static List<Lyric.LyricLine> parseTimedLines(String[] rawLines) {
+        List<Lyric.LyricLine> lyricLines = new ArrayList<>();
+        for (String rawLine : rawLines) {
+            if (rawLine == null) {
+                continue;
+            }
+            String line = rawLine.trim();
+            if (line.isEmpty() || LYRIC_TAG_PATTERN.matcher(line).matches()) {
+                continue;
+            }
+
+            Matcher matcher = TIME_TAG_PATTERN.matcher(line);
+            List<Long> timestamps = new ArrayList<>();
+            int lastTagEnd = -1;
+            while (matcher.find()) {
+                timestamps.add(parseTimeToMillis(matcher.group(1), matcher.group(2), matcher.group(3)));
+                lastTagEnd = matcher.end();
+            }
+
+            if (timestamps.isEmpty()) {
+                continue;
+            }
+
+            String content = "";
+            if (lastTagEnd >= 0 && lastTagEnd <= line.length()) {
+                content = line.substring(lastTagEnd).trim();
+            }
+
+            // 兼容少量非标准格式：歌词内容在前，时间戳在后
+            if (content.isEmpty()) {
+                Matcher reverseMatcher = TIME_TAG_PATTERN.matcher(line);
+                int firstTagStart = line.length();
+                while (reverseMatcher.find()) {
+                    firstTagStart = Math.min(firstTagStart, reverseMatcher.start());
+                }
+                if (firstTagStart > 0 && firstTagStart <= line.length()) {
+                    content = line.substring(0, firstTagStart).trim();
+                }
+            }
+
+            if (content.isEmpty()) {
+                continue;
+            }
+
+            for (Long timestamp : timestamps) {
+                lyricLines.add(new Lyric.LyricLine(timestamp, content));
+            }
+        }
+        return lyricLines;
+    }
+
+    private static List<Lyric.LyricLine> parsePlainTextLines(String[] rawLines) {
+        List<Lyric.LyricLine> lyricLines = new ArrayList<>();
+        long time = 0L;
+        long step = 3000L;
+        for (String rawLine : rawLines) {
+            if (rawLine == null) {
+                continue;
+            }
+            String content = rawLine.trim();
+            if (content.isEmpty() || LYRIC_TAG_PATTERN.matcher(content).matches()) {
+                continue;
+            }
+            lyricLines.add(new Lyric.LyricLine(time, content));
+            time += step;
+        }
+        return lyricLines;
+    }
+
+    private static long parseTimeToMillis(String minuteText, String secondText, String fractionText) {
+        int minutes = parseSafeInt(minuteText);
+        int seconds = parseSafeInt(secondText);
+        int milliseconds = 0;
+        if (fractionText != null && !fractionText.isEmpty()) {
+            String normalizedFraction = fractionText;
+            if (fractionText.length() == 1) {
+                normalizedFraction = fractionText + "00";
+            } else if (fractionText.length() == 2) {
+                normalizedFraction = fractionText + "0";
+            } else if (fractionText.length() > 3) {
+                normalizedFraction = fractionText.substring(0, 3);
+            }
+            milliseconds = parseSafeInt(normalizedFraction);
+        }
+        return minutes * 60_000L + seconds * 1000L + milliseconds;
+    }
+
+    private static int parseSafeInt(String text) {
+        try {
+            return Integer.parseInt(text);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
     /**
      * 从输入流解析歌词
-     * 
+     *
      * @param inputStream 歌词文件输入流
-     * @return 解析后的Lyric对象，如果解析失败返回null
+     * @return 解析后的 Lyric 对象，如果解析失败返回 null
      */
     public static Lyric parseLyric(InputStream inputStream) {
         if (inputStream == null) {
             return null;
         }
-        
+
         StringBuilder lyricBuilder = new StringBuilder();
-        
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, "UTF-8"))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 lyricBuilder.append(line).append("\n");
             }
         } catch (IOException e) {
-            e.printStackTrace();
             return null;
         }
-        
         return parseLyric(lyricBuilder.toString());
     }
-    
+
     /**
-     * 检查字符串是否为有效的LRC歌词格式
-     * 
+     * 检查字符串是否为有效的 LRC 歌词格式
+     *
      * @param lyricString 歌词字符串
-     * @return 如果是有效的LRC格式返回true，否则返回false
+     * @return 如果是有效的 LRC 格式返回 true，否则返回 false
      */
     public static boolean isValidLrcFormat(String lyricString) {
         if (lyricString == null || lyricString.trim().isEmpty()) {
             return false;
         }
-        
-        String[] lines = lyricString.split("\n");
-        int validLineCount = 0;
-        
+        String[] lines = lyricString.replace("\r\n", "\n").replace('\r', '\n').split("\n");
         for (String line : lines) {
-            line = line.trim();
-            if (line.isEmpty()) {
-                continue;
-            }
-            
-            // 检查是否包含时间戳格式
-            if (TIME_PATTERN.matcher(line).find()) {
-                validLineCount++;
+            if (line != null && TIME_TAG_PATTERN.matcher(line.trim()).find()) {
+                return true;
             }
         }
-        
-        // 至少有一行有效的歌词行才认为是有效的LRC格式
-        return validLineCount > 0;
+        return false;
     }
-    
+
     /**
      * 获取歌词的元数据信息（如歌曲名、歌手等）
-     * 
+     *
      * @param lyricString 歌词字符串
-     * @param tagName 标签名（如：ti, ar, al等）
-     * @return 标签对应的值，如果未找到返回null
+     * @param tagName 标签名（如：ti, ar, al 等）
+     * @return 标签对应的值，如果未找到返回 null
      */
     public static String getLyricTag(String lyricString, String tagName) {
         if (lyricString == null || tagName == null) {
             return null;
         }
-        
-        Pattern tagPattern = Pattern.compile("\\[" + tagName + ":(.+?)\\]");
+
+        Pattern tagPattern = Pattern.compile("\\[" + tagName + ":(.+?)\\]", Pattern.CASE_INSENSITIVE);
         Matcher matcher = tagPattern.matcher(lyricString);
-        
         if (matcher.find()) {
             return matcher.group(1).trim();
         }
-        
         return null;
     }
 }

@@ -99,6 +99,8 @@ public class LyricView extends View {
      */
     public void setLyric(Lyric lyric) {
         this.lyric = lyric;
+        this.currentLineIndex = -1;
+        this.scrollOffset = 0;
         invalidate(); // 重绘视图
     }
 
@@ -166,8 +168,9 @@ public class LyricView extends View {
         
         // 计算显示区域和滚动偏移
         int centerY = getHeight() / 2;
-        float targetOffset = currentLineIndex * lineHeight;
-        scrollOffset = scrollOffset + (targetOffset - scrollOffset) * 0.1f;
+        float targetOffset = Math.max(currentLineIndex, 0) * lineHeight;
+        float smoothFactor = lyric.isPrecise() ? 0.1f : 0.04f;
+        scrollOffset = scrollOffset + (targetOffset - scrollOffset) * smoothFactor;
         
         // 绘制所有歌词行，统一显示为黑色
         for (int i = 0; i < totalLines; i++) {

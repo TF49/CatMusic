@@ -89,17 +89,25 @@ public class SongsRecyclerViewAdapter extends RecyclerView.Adapter<SongsRecycler
             // 设置歌手信息
             if (holder.songArtist != null)
             {
-                holder.songArtist.setText(song.getSinger() != null ? song.getSinger() : "未知歌手");
+                String artist = song.getSinger() != null ? song.getSinger() : "未知歌手";
+                if (song.isLocal()) {
+                    artist = artist + " · 本地导入";
+                }
+                holder.songArtist.setText(artist);
             }
 
             // 加载歌曲封面图片
-            if (holder.songIcon != null && song.getPic() != null && !song.getPic().isEmpty())
+            if (holder.songIcon != null)
             {
-                Glide.with(context)
-                        .load(song.getPic())
-                        .placeholder(R.drawable.ic_launcher_foreground)
-                        .error(R.drawable.ic_launcher_foreground)
-                        .into(holder.songIcon);
+                if (song.getPic() != null && !song.getPic().isEmpty()) {
+                    Glide.with(context)
+                            .load(song.getPic())
+                            .placeholder(R.drawable.ic_launcher_foreground)
+                            .error(R.drawable.ic_launcher_foreground)
+                            .into(holder.songIcon);
+                } else {
+                    holder.songIcon.setImageResource(R.drawable.ic_launcher_foreground);
+                }
             }
 
             // 收藏按钮：显示状态与点击

@@ -1,12 +1,12 @@
 package com.example.catmusic.ui.activity;
 
 import android.content.ComponentName;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.media.AudioManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -21,12 +21,15 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.bumptech.glide.Glide;
+import com.example.catmusic.Config;
 import com.example.catmusic.R;
 import com.example.catmusic.adapter.PlaylistDialogAdapter;
+import com.example.catmusic.bean.Lyric;
 import com.example.catmusic.bean.SongUrls;
 import com.example.catmusic.bean.SongsList;
 import com.example.catmusic.service.MusicService;
 import com.example.catmusic.utils.FavoriteManager;
+import com.example.catmusic.utils.LyricParser;
 import com.google.gson.Gson;
 
 import android.app.AlertDialog;
@@ -35,6 +38,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,13 +76,13 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
     private TextView noLyricText;
     private com.example.catmusic.biz.LyricBiz lyricBiz;
     private com.example.catmusic.bean.Lyric currentLyric;
+    private String currentLyricSourceKey = "";
     private Handler lyricHandler = new Handler();
     private Runnable updateLyricRunnable = new Runnable() {
         @Override
         public void run() {
             if (musicService != null && musicService.isPlaying() && currentLyric != null) {
-                int currentProgress = musicService.getCurrentProgress();
-                lyricView.setCurrentTime(currentProgress);
+                syncLyricWithProgress();
                 lyricHandler.postDelayed(this, 100); // 每100毫秒更新一次
             }
         }
@@ -281,6 +285,20 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
         }
         
         SongsList.ResultBean.SongsBean song = songsList.get(currentPosition);
+        String lyricSourceKey = song != null && song.isLocal()
+                ? "local:" + (song.getLocalLyricUri() != null ? song.getLocalLyricUri() : song.getMid())
+                : "remote:" + (song != null ? song.getMid() : "");
+        if (lyricSourceKey.equals(currentLyricSourceKey)) {
+            syncLyricWithProgress();
+            return;
+        }
+        currentLyricSourceKey = lyricSourceKey;
+
+        if (song != null && song.isLocal()) {
+            loadLocalLyric(song);
+            return;
+        }
+
         if (song == null || song.getMid() == null || song.getMid().isEmpty()) {
             LogUtil.w(TAG, "当前歌曲没有有效的MID，无法获取歌词");
             showNoLyric();
@@ -325,33 +343,67 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
         }
         
         try {
-            // 解析歌词
-            currentLyric = com.example.catmusic.utils.LyricParser.parseLyric(lyricData);
-            
-            if (currentLyric == null || currentLyric.getLyricLines().isEmpty()) {
-                LogUtil.w(TAG, "解析歌词失败或歌词为空");
-                showNoLyric();
-                return;
-            }
-            
-            // 设置歌词到视图
-            if (lyricView != null) {
-                lyricView.setLyric(currentLyric);
-                lyricView.setVisibility(View.VISIBLE);
-            }
-            if (noLyricText != null) {
-                noLyricText.setVisibility(View.GONE);
-            }
-            
-            LogUtil.d(TAG, "歌词设置成功，共 " + currentLyric.getLyricLines().size() + " 行歌词");
-            
-            // 开始歌词同步更新
-            startLyricSync();
-            
+            applyParsedLyric(LyricParser.parseLyric(lyricData));
         } catch (Exception e) {
             LogUtil.e(TAG, "处理歌词数据时出错: " + e.getMessage());
             showNoLyric();
         }
+    }
+
+    private void loadLocalLyric(SongsList.ResultBean.SongsBean song) {
+        if (song == null || song.getLocalLyricUri() == null || song.getLocalLyricUri().isEmpty()) {
+            showNoLyric();
+            return;
+        }
+
+        try {
+            ContentResolver resolver = getContentResolver();
+            try (InputStream inputStream = resolver.openInputStream(Uri.parse(song.getLocalLyricUri()))) {
+                applyParsedLyric(LyricParser.parseLyric(inputStream));
+            }
+        } catch (Exception e) {
+            LogUtil.e(TAG, "读取本地歌词失败: " + e.getMessage());
+            showNoLyric();
+        }
+    }
+
+    private void applyParsedLyric(Lyric lyric) {
+        currentLyric = lyric;
+        if (currentLyric == null || currentLyric.getLyricLines().isEmpty()) {
+            LogUtil.w(TAG, "解析歌词失败或歌词为空");
+            showNoLyric();
+            return;
+        }
+
+        SongsList.ResultBean.SongsBean song = getCurrentSong();
+        if (song != null) {
+            song.setLyricPrecise(currentLyric.isPrecise());
+        }
+
+        if (lyricView != null) {
+            lyricView.setLyric(currentLyric);
+            lyricView.setVisibility(View.VISIBLE);
+        }
+        if (noLyricText != null) {
+            noLyricText.setVisibility(View.GONE);
+        }
+
+        LogUtil.d(TAG, "歌词设置成功，共 " + currentLyric.getLyricLines().size() + " 行歌词");
+        startLyricSync();
+    }
+
+    private SongsList.ResultBean.SongsBean getCurrentSong() {
+        if (songsList == null || songsList.isEmpty() || currentPosition < 0 || currentPosition >= songsList.size()) {
+            return null;
+        }
+        return songsList.get(currentPosition);
+    }
+
+    private void syncLyricWithProgress() {
+        if (lyricView == null || musicService == null || currentLyric == null) {
+            return;
+        }
+        lyricView.setCurrentTime(musicService.getCurrentProgress());
     }
     
     // 显示无歌词状态
@@ -365,6 +417,10 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                 if (noLyricText != null) {
                     noLyricText.setVisibility(View.VISIBLE);
                 }
+                currentLyric = null;
+                if (lyricView != null) {
+                    lyricView.setLyric(null);
+                }
                 
                 // 停止歌词同步
                 stopLyricSync();
@@ -375,6 +431,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
     // 开始歌词同步
     private void startLyricSync() {
         lyricHandler.removeCallbacks(updateLyricRunnable);
+        syncLyricWithProgress();
         lyricHandler.post(updateLyricRunnable);
     }
     
@@ -442,6 +499,9 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                 if (fromUser && musicService != null) {
                     musicService.seekTo(progress);
                     currentTime.setText(formatTime(progress));
+                    if (currentLyric != null) {
+                        lyricView.setCurrentTime(progress);
+                    }
                 }
             }
 
@@ -471,7 +531,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
 
         LogUtil.d(TAG, "接收到歌曲列表，共 " + songsList.size() + " 首歌曲，当前播放第 " + currentPosition + " 首");
 
-        // 获取歌曲播放URL
+        updateSongInfo();
         getSongsUrl();
     }
     
@@ -489,28 +549,26 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
         }
 
         try {
-            // 构建mid参数：mid[]=0009Q7MT3WQKpB&mid[]=001maG3s4AJfuU&mid[]=004FgYOA33AR6H
             StringBuilder midUrls = new StringBuilder();
-            for (int i = 0; i < songsList.size(); i++) {
-                String mid = songsList.get(i).getMid();
+            for (SongsList.ResultBean.SongsBean song : songsList) {
+                if (song == null || song.isLocal()) {
+                    continue;
+                }
+                String mid = song.getMid();
                 if (mid != null && !mid.isEmpty()) {
-                    if (i == 0) {
-                        midUrls.append("mid[]=").append(mid);
-                    } else {
-                        midUrls.append("&mid[]=").append(mid);
+                    if (midUrls.length() > 0) {
+                        midUrls.append("&");
                     }
+                    midUrls.append("mid[]=").append(mid);
                 }
             }
 
-            // 检查是否有有效的MID
             if (midUrls.length() == 0) {
-                LogUtil.w(TAG, "没有有效的歌曲MID，无法获取URL");
-                showSafeToast("没有有效的歌曲信息", Toast.LENGTH_SHORT);
+                playCurrentSongIfReady();
                 return;
             }
 
-			// 修正URL地址，使用与歌曲API相同的服务器地址
-			String url = "http://192.168.1.19:3000/api/getSongsUrl?" + midUrls.toString();
+			String url = Config.BASE_URL + Config.API_GET_SONGS_URL + "?" + midUrls;
             LogUtil.d(TAG, "请求歌曲URL: " + url);
 
             Request request = new Request.Builder()
@@ -580,6 +638,9 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
 
             // 更新每首歌曲的URL
             for (SongsList.ResultBean.SongsBean song : songsList) {
+                if (song == null || song.isLocal()) {
+                    continue;
+                }
                 String mid = song.getMid();
                 if (mid != null && songUrls.getResult().getMap().containsKey(mid)) {
                     String url = songUrls.getResult().getMap().get(mid);
@@ -591,10 +652,8 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                 }
             }
             
-            showSafeToast("成功更新 " + updatedCount + " 首歌曲的播放地址", Toast.LENGTH_SHORT);
-            
-            // 更新界面显示
             updateSongInfo();
+            playCurrentSongIfReady();
         } else {
             LogUtil.e(TAG, "未获取到有效的歌曲URL数据，songUrls对象: " + songUrls);
             showSafeToast("未获取到有效的歌曲URL数据", Toast.LENGTH_SHORT);
@@ -775,7 +834,10 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             return;
         }
 
-        SongsList.ResultBean.SongsBean song = songsList.get(currentPosition);
+        SongsList.ResultBean.SongsBean song = getCurrentSong();
+        if (song == null) {
+            return;
+        }
 
         // 更新歌曲信息
         songTitle.setText(song.getName() != null ? song.getName() : "未知歌曲");
@@ -792,20 +854,58 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             albumArt.setImageResource(R.drawable.ic_launcher_foreground);
         }
 
-        // 更新总时间
-        if (song.getDuration() > 0) {
-            totalTime.setText(formatTime(song.getDuration() * 1000)); // duration是秒，转换为毫秒
-            seekBar.setMax(song.getDuration() * 1000);
+        int durationMillis = resolveDurationMillis(song);
+        if (durationMillis > 0) {
+            totalTime.setText(formatTime(durationMillis));
+            seekBar.setMax(durationMillis);
         } else {
             totalTime.setText("00:00");
             seekBar.setMax(0);
         }
 
-        currentTime.setText("00:00");
-        seekBar.setProgress(0);
+        int progress = musicService != null ? musicService.getCurrentProgress() : 0;
+        currentTime.setText(formatTime(progress));
+        seekBar.setProgress(progress);
         updateFavoriteButton(song);
-        // 获取当前歌曲的歌词
         getCurrentSongLyric();
+    }
+
+    private int resolveDurationMillis(SongsList.ResultBean.SongsBean song) {
+        if (musicService != null) {
+            int actualDuration = musicService.getDuration();
+            if (actualDuration > 0) {
+                return actualDuration;
+            }
+        }
+        return song != null && song.getDuration() > 0 ? song.getDuration() * 1000 : 0;
+    }
+
+    private boolean canPlaySong(SongsList.ResultBean.SongsBean song) {
+        if (song == null) {
+            return false;
+        }
+        if (song.isLocal()) {
+            return song.getLocalAudioUri() != null && !song.getLocalAudioUri().isEmpty();
+        }
+        return song.getUrl() != null && !song.getUrl().isEmpty();
+    }
+
+    private void playCurrentSongIfReady() {
+        if (!serviceBound || musicService == null || songsList.isEmpty() || currentPosition < 0 || currentPosition >= songsList.size()) {
+            return;
+        }
+        SongsList.ResultBean.SongsBean song = songsList.get(currentPosition);
+        int previousServicePosition = musicService.getCurrentPosition();
+        boolean serviceIsAlreadyPlaying = musicService.isPlaying();
+        musicService.setSongsList(songsList);
+        musicService.setCurrentPosition(currentPosition);
+        if (canPlaySong(song)) {
+            if (previousServicePosition == currentPosition && serviceIsAlreadyPlaying) {
+                updateSongInfo();
+                return;
+            }
+            musicService.playMusic();
+        }
     }
 
     private void updateLoopButton(int mode) {
@@ -850,13 +950,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                 musicService.setSongsList(songsList);
                 musicService.setCurrentPosition(currentPosition);
                 musicService.setOnPlaybackStateChange(PlayerActivity.this);
-                musicService.playMusic();
-
-                // 更新播放按钮状态
-                playPauseButton.setImageResource(R.drawable.pause_active);
-
-                // 开始更新进度条
-                handler.post(updateSeekBarRunnable);
+                playCurrentSongIfReady();
             }
         }
 
@@ -889,6 +983,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             updateRandomButton(musicService.getPlayMode());
 
             // 更新歌曲信息
+            currentPosition = musicService.getCurrentPosition();
             updateSongInfo();
         }
     }
@@ -932,6 +1027,8 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             if (playPauseButton != null) {
                 playPauseButton.setImageResource(R.drawable.pause_active);
             }
+
+            updateSongInfo();
             
             // 开始旋转动画
             startRotateAnimation();
@@ -1000,14 +1097,9 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
     public void onCompletion() {
         LogUtil.d(TAG, "收到播放完成事件");
         try {
-            // 播放完成时更新界面
-            updateSongInfo();
-            
-            // 停止旋转动画
             stopRotateAnimation();
-            
-            // 确保进度条更新停止
             handler.removeCallbacks(updateSeekBarRunnable);
+            stopLyricSync();
         } catch (Exception e) {
             LogUtil.e(TAG, "处理播放完成事件时出错: " + e.getMessage());
         }
@@ -1018,18 +1110,13 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
         LogUtil.d(TAG, "收到歌曲变更事件: " + song.getName() + ", 位置: " + position);
         try {
             currentPosition = position;
+            currentLyric = null;
+            currentLyricSourceKey = "";
             updateSongInfo();
-            
-            // 重新开始旋转动画
-            stopRotateAnimation();
-            startRotateAnimation();
-            
-            // 重新开始进度条更新
+
             handler.removeCallbacks(updateSeekBarRunnable);
-            handler.post(updateSeekBarRunnable);
-            
-            // 获取新歌曲的歌词
-            getCurrentSongLyric();
+            stopLyricSync();
+            stopRotateAnimation();
         } catch (Exception e) {
             LogUtil.e(TAG, "处理歌曲变更事件时出错: " + e.getMessage());
         }
@@ -1043,6 +1130,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             
             // 停止进度条更新
             handler.removeCallbacks(updateSeekBarRunnable);
+            stopLyricSync();
         } catch (Exception e) {
             LogUtil.e(TAG, "处理错误事件时出错: " + e.getMessage());
         }

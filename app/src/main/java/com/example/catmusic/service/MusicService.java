@@ -8,6 +8,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
@@ -326,8 +327,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
      * 播放音乐
      */
     public void playMusic() {
-        // 更新播放状态
-        playbackState = PlaybackState.PLAYING;
+        playbackState = PlaybackState.IDLE;
         
         if (songsList.isEmpty()) {
             LogUtil.e(TAG, "歌曲列表为空，无法播放");
@@ -349,8 +349,10 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
 
         SongsList.ResultBean.SongsBean song = songsList.get(currentPosition);
         String url = song.getUrl();
+        String localAudioUri = song.getLocalAudioUri();
+        boolean isLocalSong = song.isLocal() && localAudioUri != null && !localAudioUri.isEmpty();
 
-        if (url == null || url.isEmpty()) {
+        if (!isLocalSong && (url == null || url.isEmpty())) {
             LogUtil.e(TAG, "歌曲URL为空，无法播放");
             playbackState = PlaybackState.ERROR;
             if (onPlaybackStateChange != null) {
@@ -360,7 +362,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
         }
 
         try {
-            LogUtil.d(TAG, "开始播放歌曲: " + song.getName() + ", URL: " + url);
+            LogUtil.d(TAG, "开始准备播放歌曲: " + song.getName());
             
             // 请求音频焦点
             if (!requestAudioFocus()) {
@@ -374,8 +376,11 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
             
             mediaPlayer.reset();
             
-            // 设置数据源
-            mediaPlayer.setDataSource(url);
+            if (isLocalSong) {
+                mediaPlayer.setDataSource(this, Uri.parse(localAudioUri));
+            } else {
+                mediaPlayer.setDataSource(url);
+            }
             
             // 异步准备
             mediaPlayer.prepareAsync();
@@ -606,7 +611,11 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
      */
     public void seekTo(int position) {
         if (mediaPlayer != null) {
-            mediaPlayer.seekTo(position);
+            try {
+                mediaPlayer.seekTo(position);
+            } catch (IllegalStateException e) {
+                LogUtil.w(TAG, "跳转播放位置失败: " + e.getMessage());
+            }
         }
     }
 
@@ -641,8 +650,15 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
      * 获取歌曲总时长
      */
     public int getDuration() {
-        if (mediaPlayer != null && mediaPlayer.getDuration() > 0) {
-            return mediaPlayer.getDuration();
+        if (mediaPlayer != null) {
+            try {
+                int duration = mediaPlayer.getDuration();
+                if (duration > 0) {
+                    return duration;
+                }
+            } catch (IllegalStateException e) {
+                LogUtil.w(TAG, "获取播放时长失败: " + e.getMessage());
+            }
         }
         return 0;
     }
@@ -753,6 +769,7 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
         mediaPlayer.start();
         isPaused = false;
         playbackState = PlaybackState.PLAYING;
+        updateNotification();
         
         // 通知Activity播放状态变化
         if (onPlaybackStateChange != null) {
@@ -765,23 +782,22 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     public void onCompletion(MediaPlayer mp) {
         LogUtil.d(TAG, "歌曲播放完成");
         playbackState = PlaybackState.IDLE;
-        
-        // 根据播放模式处理播放完成事件
+
+        // 通知Activity播放完成
+        if (onPlaybackStateChange != null) {
+            onPlaybackStateChange.onCompletion();
+        }
+
         switch (playMode) {
             case MODE_LOOP_ONE:
-                // 单曲循环，重新播放当前歌曲
                 playMusic();
                 break;
             case MODE_LOOP_ALL:
             case MODE_RANDOM:
-                // 列表循环或随机播放，播放下一首
                 playNext();
                 break;
-        }
-        
-        // 通知Activity播放完成
-        if (onPlaybackStateChange != null) {
-            onPlaybackStateChange.onCompletion();
+            default:
+                break;
         }
     }
 

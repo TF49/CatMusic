@@ -14,6 +14,7 @@ import com.bumptech.glide.Glide;
 import com.example.catmusic.R;
 import com.example.catmusic.adapter.AlbumsRecyclerViewAdapter;
 import com.example.catmusic.bean.Recommend;
+import com.example.catmusic.utils.LocalMusicManager;
 import com.google.gson.Gson;
 import com.youth.banner.Banner;
 import com.youth.banner.adapter.BannerImageAdapter;
@@ -42,6 +43,7 @@ public class HomeActivity extends BaseActivity
     private RecyclerView albumsList; // 添加RecyclerView引用
     private List<Recommend.ResultBean.AlbumsBean> albums = new ArrayList<>();
     private AlbumsRecyclerViewAdapter albumsAdapter; // 添加适配器引用t<>();
+    private LocalMusicManager localMusicManager;
 
     /**
      * Activity的入口方法，在创建Activity时被系统调用
@@ -96,6 +98,7 @@ public class HomeActivity extends BaseActivity
         okHttpClient = new OkHttpClient.Builder().build();
         //2.创建一个Gson对象
         gson = new Gson();
+        localMusicManager = new LocalMusicManager(this);
     }
     
     /**
@@ -207,7 +210,13 @@ public class HomeActivity extends BaseActivity
     private void handlerAlbumsData(Recommend recommend)
     {
         //1.处理专辑数据
-         albums = recommend.getResult().getAlbums();
+         albums = new ArrayList<>(recommend.getResult().getAlbums());
+         Recommend.ResultBean.AlbumsBean localAlbum = new Recommend.ResultBean.AlbumsBean();
+         localAlbum.setId(LocalMusicManager.LOCAL_LIBRARY_ALBUM_ID);
+         localAlbum.setTitle(LocalMusicManager.LOCAL_ALBUM_NAME);
+         localAlbum.setUsername("管理你的本地歌曲与歌词");
+         localAlbum.setPic("");
+         albums.add(0, localAlbum);
          initAlbumsRecyclerAdapter();
     }
 

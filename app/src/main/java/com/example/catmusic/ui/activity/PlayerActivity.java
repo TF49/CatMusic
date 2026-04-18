@@ -890,17 +890,32 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
         return song.getUrl() != null && !song.getUrl().isEmpty();
     }
 
+    private boolean isSameSong(SongsList.ResultBean.SongsBean first, SongsList.ResultBean.SongsBean second) {
+        if (first == null || second == null) {
+            return false;
+        }
+        if (first.isLocal() || second.isLocal()) {
+            String firstUri = first.getLocalAudioUri();
+            String secondUri = second.getLocalAudioUri();
+            return firstUri != null && firstUri.equals(secondUri);
+        }
+        String firstMid = first.getMid();
+        String secondMid = second.getMid();
+        return firstMid != null && firstMid.equals(secondMid);
+    }
+
     private void playCurrentSongIfReady() {
         if (!serviceBound || musicService == null || songsList.isEmpty() || currentPosition < 0 || currentPosition >= songsList.size()) {
             return;
         }
         SongsList.ResultBean.SongsBean song = songsList.get(currentPosition);
-        int previousServicePosition = musicService.getCurrentPosition();
-        boolean serviceIsAlreadyPlaying = musicService.isPlaying();
+        SongsList.ResultBean.SongsBean serviceSong = musicService.getCurrentSong();
+        boolean serviceHasSameSong = isSameSong(song, serviceSong);
+        boolean serviceIsActive = musicService.isPlaying() || musicService.isPaused();
         musicService.setSongsList(songsList);
         musicService.setCurrentPosition(currentPosition);
         if (canPlaySong(song)) {
-            if (previousServicePosition == currentPosition && serviceIsAlreadyPlaying) {
+            if (serviceHasSameSong && serviceIsActive) {
                 updateSongInfo();
                 return;
             }

@@ -54,6 +54,7 @@ public class SongListActivity extends BaseActivity {
     private final List<SongsList.ResultBean.SongsBean> remoteSongs = new ArrayList<>();
     private FavoriteManager favoriteManager;
     private LocalMusicManager localMusicManager;
+    private boolean isLocalLibraryPage;
 
     private final ActivityResultLauncher<String[]> importAudioLauncher =
             registerForActivityResult(new ActivityResultContracts.OpenMultipleDocuments(), this::handleImportedAudioUris);
@@ -66,11 +67,16 @@ public class SongListActivity extends BaseActivity {
         initTabBar(true, "专辑歌曲", false);
         initView();
         initOkHttp();
+        isLocalLibraryPage = getIntent().getLongExtra("id", 0) == LocalMusicManager.LOCAL_LIBRARY_ALBUM_ID;
         setAlbumData();
         initSongsRecyclerAdapter();
         bindImportAction();
         rebuildSongsDisplay();
-        getRecommendSongs();
+        if (isLocalLibraryPage) {
+            showSafeToast("已进入本地导入曲库", Toast.LENGTH_SHORT);
+        } else {
+            getRecommendSongs();
+        }
     }
 
     private void initView() {
@@ -96,6 +102,7 @@ public class SongListActivity extends BaseActivity {
 
     private void bindImportAction() {
         if (importLocalMusicButton != null) {
+            importLocalMusicButton.setVisibility(isLocalLibraryPage ? android.view.View.VISIBLE : android.view.View.GONE);
             importLocalMusicButton.setOnClickListener(v -> importAudioLauncher.launch(new String[]{"audio/*"}));
         }
     }
@@ -104,11 +111,15 @@ public class SongListActivity extends BaseActivity {
         String pic = getIntent().getStringExtra("pic");
         String title = getIntent().getStringExtra("title");
         ablumsTitle.setText(title != null ? title : "专辑歌曲");
-        Glide.with(this)
-                .load(pic)
-                .placeholder(R.drawable.ic_launcher_foreground)
-                .error(R.drawable.ic_launcher_foreground)
-                .into(ablumsIcon);
+        if (isLocalLibraryPage) {
+            ablumsIcon.setImageResource(R.drawable.ic_launcher_foreground);
+        } else {
+            Glide.with(this)
+                    .load(pic)
+                    .placeholder(R.drawable.ic_launcher_foreground)
+                    .error(R.drawable.ic_launcher_foreground)
+                    .into(ablumsIcon);
+        }
     }
 
     private void getRecommendSongs() {
@@ -235,8 +246,11 @@ public class SongListActivity extends BaseActivity {
 
     private void rebuildSongsDisplay() {
         songs.clear();
-        songs.addAll(remoteSongs);
-        songs.addAll(localMusicManager.getAllImportedSongs());
+        if (isLocalLibraryPage) {
+            songs.addAll(localMusicManager.getAllImportedSongs());
+        } else {
+            songs.addAll(remoteSongs);
+        }
         songsAdapter.notifyDataSetChanged();
     }
 

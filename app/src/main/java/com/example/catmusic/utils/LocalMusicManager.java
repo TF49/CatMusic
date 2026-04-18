@@ -23,9 +23,10 @@ import java.nio.charset.StandardCharsets;
  * 使用 SharedPreferences + Gson 持久化用户导入的本地歌曲元数据。
  */
 public class LocalMusicManager {
+    public static final long LOCAL_LIBRARY_ALBUM_ID = -20260418L;
     private static final String PREF_NAME = "catmusic_local_music";
     private static final String KEY_LOCAL_MUSIC_JSON = "local_music_json";
-    private static final String LOCAL_ALBUM_NAME = "本地导入";
+    public static final String LOCAL_ALBUM_NAME = "本地导入";
 
     private final Context context;
     private final SharedPreferences prefs;

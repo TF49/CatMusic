@@ -55,6 +55,13 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
     // 回调接口，用于通知Activity播放状态变化
     private OnPlaybackStateChange onPlaybackStateChange;
 
+    public SongsList.ResultBean.SongsBean getCurrentSong() {
+        if (songsList == null || songsList.isEmpty() || currentPosition < 0 || currentPosition >= songsList.size()) {
+            return null;
+        }
+        return songsList.get(currentPosition);
+    }
+
     public class MusicBinder extends Binder {
         public MusicService getService() {
             return MusicService.this;
@@ -229,6 +236,9 @@ public class MusicService extends Service implements MediaPlayer.OnPreparedListe
                 switch (focusChange) {
                     case AudioManager.AUDIOFOCUS_GAIN:
                         // 重新获得音频焦点，恢复播放
+                        if (mediaPlayer != null) {
+                            mediaPlayer.setVolume(1.0f, 1.0f);
+                        }
                         if (mediaPlayer != null && !mediaPlayer.isPlaying() && isPaused) {
                             mediaPlayer.start();
                             isPaused = false;

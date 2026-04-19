@@ -124,7 +124,7 @@ public class SongListActivity extends BaseActivity {
 
     private void getRecommendSongs() {
         long albumId = getIntent().getLongExtra("id", 0);
-        String url = Config.BASE_URL + Config.API_GET_ALBUM + "?id=" + albumId;
+        String url = Config.getBaseUrl() + Config.API_GET_ALBUM + "?id=" + albumId;
         LogUtil.d(TAG, "请求专辑歌曲列表: " + url);
         Request request = new Request.Builder().url(url).build();
 
@@ -183,7 +183,7 @@ public class SongListActivity extends BaseActivity {
             return;
         }
 
-        String url = Config.BASE_URL + Config.API_GET_SONGS_URL + "?" + midUrls;
+        String url = Config.getBaseUrl() + Config.API_GET_SONGS_URL + "?" + midUrls;
         LogUtil.d(TAG, "请求歌曲URL: " + url);
         Request request = new Request.Builder().url(url).build();
 

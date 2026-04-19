@@ -1,4 +1,6 @@
 <resources>
+    <!-- 真机访问局域网内「其他电脑」上的服务时填入该电脑 IPv4；留空时：模拟器先经 10.0.2.2 拉取 Node 本机 IPv4，真机用本机 Wi‑Fi 私网 IP -->
+    <string name="catmusic_server_host" translatable="false"></string>
     <string name="app_name">CatMusic</string>
     <string name="desc_favorite">收藏</string>
     <string name="my_favorites">我的收藏</string>

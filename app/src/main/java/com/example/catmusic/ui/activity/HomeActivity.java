@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.example.catmusic.Config;
 import com.example.catmusic.R;
 import com.example.catmusic.adapter.AlbumsRecyclerViewAdapter;
 import com.example.catmusic.bean.Recommend;
@@ -103,7 +104,7 @@ public class HomeActivity extends BaseActivity
     
     /**
      * 从服务器获取推荐数据
-     * 创建一个 Request 对象，指定请求的URL为http://192.168.1.19:3000/api/getRecommend
+     * 创建一个 Request 对象，指定请求的 URL 为 {@link Config#getApiUrl(String)} 拼接的 getRecommend 接口
      * 通过 okHttpClient.newCall(request).enqueue() 发起异步网络请求
      * 在 onFailure 回调中处理请求失败的情况，使用 runOnUiThread 在主线程中显示错误提示
      * 在 onResponse 回调中处理请求成功的情况：
@@ -116,7 +117,7 @@ public class HomeActivity extends BaseActivity
     {
         //2.定义我们的请求
         Request request = new Request.Builder()
-				.url("http://192.168.1.19:3000/api/getRecommend")
+                .url(Config.getApiUrl(Config.API_GET_RECOMMEND))
                 .build();
 
         //3.通过异步的方式发送请求

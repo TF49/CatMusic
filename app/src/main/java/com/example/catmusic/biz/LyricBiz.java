@@ -43,7 +43,7 @@ public class LyricBiz {
         }
 
         // 使用正确的配置常量和URL构建方式
-        String url = Config.BASE_URL + "api/getLyric?mid=" + mid;
+        String url = Config.getApiUrl(Config.API_GET_LYRIC) + "?mid=" + mid;
         LogUtil.d(TAG, "请求歌词URL: " + url);
 
         Request request = new Request.Builder()

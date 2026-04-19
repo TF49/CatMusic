@@ -3,6 +3,7 @@
  * 对于从第三方接口返回的数据，我们会做一层数据处理，最终提供给前端的数据前端可以直接使用，无需再处理。这样也比较符合真实企业项目的开发规范，即数据的处理放在后端做，前端只做数据渲染和交互。
  */
 const fs = require('fs')
+const os = require('os')
 const path = require('path')
 const axios = require('axios')
 const pinyin = require('pinyin')
@@ -29,6 +30,36 @@ const commonParams = {
   platform: 'yqq.json'
 }
 
+function getPrimaryLanIPv4() {
+  const nets = os.networkInterfaces()
+  const found = []
+  for (const name of Object.keys(nets)) {
+    const group = nets[name]
+    if (!group) continue
+    for (const net of group) {
+      const isV4 = net.family === 'IPv4' || net.family === 4
+      if (isV4 && !net.internal) {
+        found.push({ name, address: net.address })
+      }
+    }
+  }
+  if (found.length === 0) {
+    return '127.0.0.1'
+  }
+  const badIface = (n) =>
+    /docker|veth|vmware|virtualbox|vethernet|hyper-v|tailscale|zerotier|wsl|loopback/i.test(
+      String(n).toLowerCase()
+    )
+  const usable = found.filter((f) => !badIface(f.name))
+  const pool = usable.length > 0 ? usable : found
+  const nonDockerBridge = pool.filter((f) => !f.address.startsWith('172.17.'))
+  const pick = nonDockerBridge.length > 0 ? nonDockerBridge[0] : pool[0]
+  return pick.address
+}
+
+const SERVER_PORT = process.env.PORT || 3000
+const SERVER_BASE = `http://${getPrimaryLanIPv4()}:${SERVER_PORT}`
+
 // 自定义专辑与歌曲配置区域 - 开始
 // 歌曲仅出现在对应专辑中，不再混入所有歌单
 // 说明：id、mid 需全局唯一；url、pic 需 Android 可访问
@@ -37,16 +68,16 @@ const customAlbums = [
     id: 999000001,
     title: '没预报的雨',
     username: '黄依静大镁铝',
-    pic: 'http://192.168.1.19:3000/images/没预报的雨.jpg',
+    pic: `${SERVER_BASE}/images/没预报的雨.jpg`,
     songs: [
       {
         id: 999999001,
         mid: 'custom_meiyubaodeyu_001',
         name: '没预报的雨',
         singer: '林时屿、葛雨晴',
-        url: 'http://192.168.1.19:3000/music/没预报的雨.mp3',
+        url: `${SERVER_BASE}/music/没预报的雨.mp3`,
         duration: 202,
-        pic: 'http://192.168.1.19:3000/images/没预报的雨.jpg',
+        pic: `${SERVER_BASE}/images/没预报的雨.jpg`,
         album: '没预报的雨'
       }
     ]
@@ -136,6 +167,8 @@ function mergeSinger(singer) {
 
 // 注册后端路由
 function registerRouter(app) {
+  registerServerBase(app)
+
   registerRecommend(app)
 
   registerSingerList(app)
@@ -155,6 +188,23 @@ function registerRouter(app) {
   registerSearch(app)
 
   registerLyric(app)
+}
+
+// 告知客户端当前机器局域网 IPv4 与完整 baseUrl（供模拟器等环境拉取宿主机真实地址）
+function registerServerBase(app) {
+  app.get('/api/serverBase', (req, res) => {
+    const host = getPrimaryLanIPv4()
+    const port = process.env.PORT || 3000
+    const baseUrl = `http://${host}:${port}/`
+    res.json({
+      code: ERR_OK,
+      result: {
+        host,
+        port,
+        baseUrl
+      }
+    })
+  })
 }
 
 // 注册推荐列表接口路由

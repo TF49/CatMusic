@@ -568,7 +568,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                 return;
             }
 
-			String url = Config.BASE_URL + Config.API_GET_SONGS_URL + "?" + midUrls;
+			String url = Config.getBaseUrl() + Config.API_GET_SONGS_URL + "?" + midUrls;
             LogUtil.d(TAG, "请求歌曲URL: " + url);
 
             Request request = new Request.Builder()

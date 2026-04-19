@@ -52,12 +52,12 @@
    - 默认监听 `http://<你的局域网 IP>:3000/`
    - 请确保 Android 设备与服务器处于同一局域网
 
-3. **配置 Android 客户端服务器地址**
-   - 打开 `app/src/main/java/com/example/catmusic/Config.java`
-   - 将 `BASE_URL` 修改为你实际的服务器地址，例如：
-     ```java
-     public static final String BASE_URL = "http://192.168.1.16:3000/";
-     ```
+3. **配置 Android 客户端访问的服务器地址（按需）**
+   - 默认行为：`Config.getBaseUrl()` 会在运行时自动拼接 `http://<主机>:3000/`。模拟器使用 `10.0.2.2` 访问宿主机上的 Node 服务；真机使用本机当前 Wi‑Fi 等网卡的私网 IPv4。
+   - **真机访问局域网内「另一台电脑」上的服务**时，请在 `app/src/main/res/values/strings.xml` 中为 `catmusic_server_host` 填入该电脑的 IPv4（不要带 `http://` 与端口），例如：`192.168.1.16`。
+   - 端口默认为 `3000`，与 `Config.SERVER_PORT` 及 Node 默认端口一致；若改端口需同步修改 `Config.SERVER_PORT` 或 Node 的 `PORT` 环境变量。
+   - 相关实现：`Config.java`、`LanHostResolver.java`、`CatMusicApplication.java`（在 `AndroidManifest.xml` 的 `application` 上注册）。
+   - 模拟器：若网卡为 `10.0.2.x` 但未识别为「模拟器指纹」，不会再误连 `10.0.2.15`；启动后会请求 `http://10.0.2.2:3000/api/serverBase`，用 Node 返回的本机局域网 IPv4（如 `172.18.x.x`）作为后续 API 根地址，与 `router.js` 里 `SERVER_BASE` 一致。
 
 4. **在 Android Studio 中打开项目**
     - 启动 Android Studio
@@ -117,8 +117,9 @@ CatMusic/
 │   │   │   │               ├── lyric/            # 自定义歌词控件及歌词解析
 │   │   │   │               ├── service/          # 音乐播放服务
 │   │   │   │               ├── ui/               # UI 相关类（首页/播放页/歌单页等）
-│   │   │   │               ├── utils/            # 工具类（包括歌词解析、网络等）
-│   │   │   │               └── Config.java       # 统一管理后端服务器地址
+│   │   │   │               ├── utils/            # 工具类（含 LanHostResolver 解析局域网主机等）
+│   │   │   │               ├── Config.java       # 后端基础 URL（getBaseUrl）、API 路径
+│   │   │   │               └── CatMusicApplication.java  # Application 入口，初始化 Config
 │   │   │   └── res/                              # 资源文件
 │   │   │       ├── drawable/                     # 图片和形状资源（含专辑封面背景等）
 │   │   │       ├── layout/                       # 布局文件（含播放器页面）
@@ -127,7 +128,7 @@ CatMusic/
 │   │   └── AndroidManifest.xml                   # 应用配置文件
 │   └── build.gradle                              # 模块构建配置
 ├── catmusic_server-main/                         # Node.js 后端代理 & 自定义歌曲服务
-│   ├── router.js                                 # 核心路由与 QQ 音乐 API 代理、自定义歌曲配置
+│   ├── router.js                                 # 核心路由与 QQ 音乐 API 代理；自定义资源 URL 使用本机 IP 动态拼接 SERVER_BASE
 │   ├── prod.server.js                            # 生产环境启动入口
 │   └── public/                                   # 静态资源（自定义 mp3、封面图片等）
 └── build.gradle                                  # 项目构建配置
@@ -201,6 +202,7 @@ CatMusic/
 
 - `项目总结.md`：项目整体设计与开发总结
 - `添加自定义歌曲完整指南.md`：如何在当前架构下为 CatMusic 添加自定义歌曲的完整操作步骤
+- `添加自定义专辑与歌曲指南.md`：自定义专辑与归属歌曲的配置说明（与 `router.js` 中 `customAlbums`、`SERVER_BASE` 一致）
 
 ## 📋 待办事项
 

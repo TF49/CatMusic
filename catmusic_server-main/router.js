@@ -67,7 +67,7 @@ const customAlbums = [
   {
     id: 999000001,
     title: '没预报的雨',
-    username: '黄依静大镁铝',
+    username: '没预报的雨',
     pic: `${SERVER_BASE}/images/没预报的雨.jpg`,
     songs: [
       {

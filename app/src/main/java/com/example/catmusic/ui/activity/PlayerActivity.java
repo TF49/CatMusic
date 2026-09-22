@@ -100,6 +100,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
     // 网络请求相关
     private OkHttpClient okHttpClient;
     private Gson gson;
+    private Call pendingUrlCall; // 用于取消未完成的请求
 
     // 使用静态内部类和弱引用避免内存泄漏
     private static class SeekBarUpdateHandler extends Handler {
@@ -182,7 +183,12 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
 
     // 初始化网络请求相关的组件
     private void initOkHttp() {
-        okHttpClient = new OkHttpClient.Builder().build();
+        okHttpClient = new OkHttpClient.Builder()
+                .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                .writeTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                .cache(new okhttp3.Cache(getCacheDir(), 10 * 1024 * 1024)) // 10MB cache
+                .build();
         gson = new Gson();
     }
     
@@ -327,7 +333,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                     @Override
                     public void run() {
                         showNoLyric();
-                        showSafeToast("获取歌词失败: " + e.getMessage(), Toast.LENGTH_SHORT);
+                        showSafeToast(getString(R.string.lyric_fetch_failed) + ": " + e.getMessage(), Toast.LENGTH_SHORT);
                     }
                 });
             }
@@ -575,14 +581,20 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                     .url(url)
                     .build();
 
-            okHttpClient.newCall(request).enqueue(new Callback() {
+            // 取消之前未完成的请求
+            if (pendingUrlCall != null && !pendingUrlCall.isCanceled()) {
+                pendingUrlCall.cancel();
+            }
+
+            pendingUrlCall = okHttpClient.newCall(request);
+            pendingUrlCall.enqueue(new Callback() {
                 @Override
                 public void onFailure(@NonNull Call call, @NonNull IOException e) {
                     LogUtil.e(TAG, "获取歌曲URL失败: " + e.getMessage());
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            showSafeToast("获取歌曲URL失败: " + e.getMessage(), Toast.LENGTH_SHORT);
+                            showSafeToast(getString(R.string.song_url_fetch_failed) + ": " + e.getMessage(), Toast.LENGTH_SHORT);
                         }
                     });
                 }
@@ -591,9 +603,11 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                 public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                     if (response.isSuccessful() && response.body() != null) {
                         try {
-                            String jsonData = response.body().string();
+                            final String jsonData = response.body().string();
                             LogUtil.d(TAG, "获取歌曲URL响应: " + jsonData);
-                            SongUrls songUrls = gson.fromJson(jsonData, SongUrls.class);
+                            
+                            // 在后台线程解析 JSON
+                            final SongUrls songUrls = gson.fromJson(jsonData, SongUrls.class);
 
                             runOnUiThread(new Runnable() {
                                 @Override
@@ -606,7 +620,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    showSafeToast("解析歌曲URL数据失败", Toast.LENGTH_SHORT);
+                                    showSafeToast(getString(R.string.song_url_fetch_failed), Toast.LENGTH_SHORT);
                                 }
                             });
                         }
@@ -615,7 +629,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                showSafeToast("获取歌曲URL响应失败: " + response.code(), Toast.LENGTH_SHORT);
+                                showSafeToast(getString(R.string.song_url_fetch_failed) + ": " + response.code(), Toast.LENGTH_SHORT);
                             }
                         });
                     }
@@ -656,7 +670,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
             playCurrentSongIfReady();
         } else {
             LogUtil.e(TAG, "未获取到有效的歌曲URL数据，songUrls对象: " + songUrls);
-            showSafeToast("未获取到有效的歌曲URL数据", Toast.LENGTH_SHORT);
+            showSafeToast(getString(R.string.song_url_fetch_failed), Toast.LENGTH_SHORT);
         }
     }
 
@@ -840,8 +854,8 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
         }
 
         // 更新歌曲信息
-        songTitle.setText(song.getName() != null ? song.getName() : "未知歌曲");
-        songArtist.setText(song.getSinger() != null ? song.getSinger() : "未知歌手");
+        songTitle.setText(song.getName() != null ? song.getName() : getString(R.string.unknown_song));
+        songArtist.setText(song.getSinger() != null ? song.getSinger() : getString(R.string.unknown_artist));
 
         // 加载专辑封面
         if (song.getPic() != null && !song.getPic().isEmpty()) {
@@ -977,6 +991,33 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
     };
 
     @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        // 保存播放状态
+        outState.putInt("currentPosition", currentPosition);
+        if (musicService != null) {
+            outState.putInt("playbackPosition", musicService.getCurrentProgress());
+            outState.putBoolean("isPlaying", musicService.isPlaying());
+        }
+    }
+
+    @Override
+    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        // 恢复播放状态
+        currentPosition = savedInstanceState.getInt("currentPosition", 0);
+        int playbackPosition = savedInstanceState.getInt("playbackPosition", 0);
+        boolean wasPlaying = savedInstanceState.getBoolean("isPlaying", false);
+        
+        if (musicService != null && playbackPosition > 0) {
+            musicService.seekTo(playbackPosition);
+            if (wasPlaying) {
+                musicService.resumeMusic();
+            }
+        }
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         // 在Activity恢复时重新请求音频焦点
@@ -1014,6 +1055,11 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
     protected void onDestroy() {
         super.onDestroy();
         LogUtil.d(TAG, "PlayerActivity onDestroy");
+        
+        // 取消未完成的网络请求
+        if (pendingUrlCall != null && !pendingUrlCall.isCanceled()) {
+            pendingUrlCall.cancel();
+        }
         
         // 停止旋转动画
         stopRotateAnimation();
@@ -1141,7 +1187,7 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
     public void onError(String error) {
         LogUtil.e(TAG, "收到错误事件: " + error);
         try {
-            showSafeToast("播放错误: " + error, Toast.LENGTH_SHORT);
+            showSafeToast(getString(R.string.playback_error) + ": " + error, Toast.LENGTH_SHORT);
             
             // 停止进度条更新
             handler.removeCallbacks(updateSeekBarRunnable);

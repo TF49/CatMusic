@@ -11,4 +11,19 @@
     <string name="favorite_removed">已取消收藏</string>
     <string name="import_local_music">导入本地歌曲</string>
     <string name="local_music_label">本地导入</string>
+    
+    <!-- 播放控制 -->
+    <string name="play_pause_button">播放/暂停</string>
+    <string name="previous_button">上一首</string>
+    <string name="next_button">下一首</string>
+    <string name="shuffle_button">随机播放</string>
+    <string name="repeat_button">循环模式</string>
+    
+    <!-- 通用文本 -->
+    <string name="unknown_song">未知歌曲</string>
+    <string name="unknown_artist">未知歌手</string>
+    <string name="no_lyric">暂无歌词</string>
+    <string name="lyric_fetch_failed">获取歌词失败</string>
+    <string name="song_url_fetch_failed">获取歌曲URL失败</string>
+    <string name="playback_error">播放错误</string>
 </resources>

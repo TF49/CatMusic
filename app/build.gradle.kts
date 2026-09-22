@@ -23,7 +23,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            // TODO: 配置正式签名
+            // signingConfig = signingConfigs.getByName("release")
         }
     }
 
@@ -39,15 +40,17 @@ dependencies {
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
-//    第一步 安装依赖
+    
+    // UI 组件库
     implementation("io.github.youth5201314:banner:2.2.3")
     implementation("com.github.bumptech.glide:glide:4.12.0")
+    annotationProcessor("com.github.bumptech.glide:compiler:4.12.0")
     implementation("androidx.recyclerview:recyclerview:1.2.1")
-    // 第三方库（通过版本目录）
+    
+    // 网络与数据
     implementation(libs.okhttp)
     implementation(libs.gson)
-    implementation(libs.picasso)
-
+    
     // 测试依赖
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

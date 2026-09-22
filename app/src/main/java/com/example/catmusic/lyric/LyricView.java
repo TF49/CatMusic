@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Interpolator;
 
+import com.example.catmusic.R;
 import com.example.catmusic.bean.Lyric;
 
 import java.util.List;
@@ -67,17 +68,17 @@ public class LyricView extends View {
      * 初始化画笔
      */
     private void init() {
-        // 普通歌词画笔 - 使用黑色
+        // 普通歌词画笔 - 使用灰色
         normalPaint = new Paint();
-        normalPaint.setColor(Color.BLACK);
+        normalPaint.setColor(Color.parseColor("#999999"));
         normalPaint.setTextSize(spToPx(textSize));
         normalPaint.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
         normalPaint.setAntiAlias(true);
         normalPaint.setTextAlign(Paint.Align.CENTER);
         
-        // 高亮歌词画笔 - 使用黑色
+        // 高亮歌词画笔 - 使用主题橙色
         highlightPaint = new Paint();
-        highlightPaint.setColor(Color.BLACK);
+        highlightPaint.setColor(Color.parseColor("#FF8A00"));
         highlightPaint.setTextSize(spToPx(highlightTextSize));
         highlightPaint.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         highlightPaint.setAntiAlias(true);
@@ -85,7 +86,7 @@ public class LyricView extends View {
         
         // 阴影画笔 - 为高亮歌词添加立体感
         shadowPaint = new Paint();
-        shadowPaint.setColor(Color.parseColor("#80000000"));
+        shadowPaint.setColor(Color.parseColor("#40FF8A00"));
         shadowPaint.setTextSize(spToPx(highlightTextSize));
         shadowPaint.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         shadowPaint.setAntiAlias(true);
@@ -138,13 +139,13 @@ public class LyricView extends View {
      * 绘制无歌词提示
      */
     private void drawNoLyricText(Canvas canvas) {
-        String text = "🎵 暂无歌词 🎵";
+        String text = getContext().getString(R.string.no_lyric);
         float x = getWidth() / 2f;
         float y = getHeight() / 2f;
         
         // 创建无歌词提示的专用画笔
         Paint noLyricPaint = new Paint();
-        noLyricPaint.setColor(Color.parseColor("#666666"));
+        noLyricPaint.setColor(Color.parseColor("#999999"));
         noLyricPaint.setTextSize(spToPx(20));
         noLyricPaint.setTypeface(Typeface.create("sans-serif-light", Typeface.ITALIC));
         noLyricPaint.setAntiAlias(true);
@@ -172,9 +173,9 @@ public class LyricView extends View {
         float smoothFactor = lyric.isPrecise() ? 0.1f : 0.04f;
         scrollOffset = scrollOffset + (targetOffset - scrollOffset) * smoothFactor;
         
-        // 绘制所有歌词行，统一显示为黑色
+        // 绘制所有歌词行，区分当前行和其他行
         for (int i = 0; i < totalLines; i++) {
-            float y = centerY - scrollOffset + (i - currentLineIndex) * lineHeight;
+            float y = centerY - scrollOffset + (i * lineHeight);
             
             // 检查是否在可见区域内
             if (y < -lineHeight || y > getHeight() + lineHeight) {
@@ -184,13 +185,18 @@ public class LyricView extends View {
             String text = lines.get(i).getContent().replace("\n", "").replace("\\n", "");
             float x = getWidth() / 2f;
             
-            // 计算歌词行的透明度（根据距离中心位置）
-            float distanceFromCenter = Math.abs(y - centerY);
-            float alpha = Math.max(0, 1 - distanceFromCenter / (getHeight() / 2));
-            
-            // 所有歌词统一使用黑色绘制
-            normalPaint.setAlpha((int)(alpha * 255));
-            canvas.drawText(text, x, y, normalPaint);
+            // 判断是否为当前播放行
+            if (i == currentLineIndex) {
+                // 当前播放行使用高亮画笔
+                highlightPaint.setAlpha(255);
+                canvas.drawText(text, x, y, highlightPaint);
+            } else {
+                // 其他行使用普通画笔，根据距离中心位置调整透明度
+                float distanceFromCenter = Math.abs(y - centerY);
+                float alpha = Math.max(0.3f, 1 - distanceFromCenter / (getHeight() / 2));
+                normalPaint.setAlpha((int)(alpha * 255));
+                canvas.drawText(text, x, y, normalPaint);
+            }
         }
     }
     

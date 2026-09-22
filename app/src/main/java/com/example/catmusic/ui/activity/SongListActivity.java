@@ -87,7 +87,12 @@ public class SongListActivity extends BaseActivity {
     }
 
     private void initOkHttp() {
-        okHttpClient = new OkHttpClient.Builder().build();
+        okHttpClient = new OkHttpClient.Builder()
+                .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                .writeTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                .cache(new okhttp3.Cache(getCacheDir(), 10 * 1024 * 1024)) // 10MB cache
+                .build();
         gson = new Gson();
         localMusicManager = new LocalMusicManager(this);
     }

@@ -83,15 +83,15 @@ public class SongsRecyclerViewAdapter extends RecyclerView.Adapter<SongsRecycler
             // 设置歌曲名称
             if (holder.songTitle != null)
             {
-                holder.songTitle.setText(song.getName() != null ? song.getName() : "未知歌曲");
+                holder.songTitle.setText(song.getName() != null ? song.getName() : context.getString(R.string.unknown_song));
             }
 
             // 设置歌手信息
             if (holder.songArtist != null)
             {
-                String artist = song.getSinger() != null ? song.getSinger() : "未知歌手";
+                String artist = song.getSinger() != null ? song.getSinger() : context.getString(R.string.unknown_artist);
                 if (song.isLocal()) {
-                    artist = artist + " · 本地导入";
+                    artist = artist + " · " + context.getString(R.string.local_music_label);
                 }
                 holder.songArtist.setText(artist);
             }

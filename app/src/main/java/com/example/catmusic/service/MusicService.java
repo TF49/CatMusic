@@ -19,7 +19,6 @@ import androidx.core.app.NotificationCompat;
 
 import com.example.catmusic.R;
 import com.example.catmusic.bean.SongsList;
-import com.example.catmusic.service.PlaybackState;
 import com.example.catmusic.ui.activity.PlayerActivity;
 
 import java.io.IOException;

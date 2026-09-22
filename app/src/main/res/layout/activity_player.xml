@@ -84,7 +84,7 @@
                 android:layout_marginTop="@dimen/spacing_lg"
                 android:background="@drawable/lyric_background"
                 android:padding="@dimen/spacing_md"
-                android:text="暂无歌词"
+                android:text="@string/no_lyric"
                 android:textColor="@color/text_tertiary"
                 android:textSize="@dimen/T2"
                 android:gravity="center"
@@ -152,7 +152,7 @@
                 android:layout_height="44dp"
                 android:padding="@dimen/spacing_sm"
                 android:src="@drawable/loop_active"
-                android:contentDescription="@null"
+                android:contentDescription="@string/repeat_button"
                 android:background="?attr/selectableItemBackgroundBorderless" />
 
             <ImageView
@@ -163,7 +163,7 @@
                 android:layout_marginEnd="@dimen/spacing_md"
                 android:padding="@dimen/spacing_sm"
                 android:src="@drawable/pre_active"
-                android:contentDescription="@null"
+                android:contentDescription="@string/previous_button"
                 android:background="?attr/selectableItemBackgroundBorderless" />
 
             <ImageView
@@ -174,7 +174,7 @@
                 android:layout_marginEnd="@dimen/spacing_sm"
                 android:padding="@dimen/spacing_sm"
                 android:src="@drawable/play_active"
-                android:contentDescription="@null"
+                android:contentDescription="@string/play_pause_button"
                 android:background="?attr/selectableItemBackgroundBorderless" />
 
             <ImageView
@@ -185,7 +185,7 @@
                 android:layout_marginEnd="@dimen/spacing_md"
                 android:padding="@dimen/spacing_sm"
                 android:src="@drawable/next_active"
-                android:contentDescription="@null"
+                android:contentDescription="@string/next_button"
                 android:background="?attr/selectableItemBackgroundBorderless" />
 
             <ImageView
@@ -194,7 +194,7 @@
                 android:layout_height="44dp"
                 android:padding="@dimen/spacing_sm"
                 android:src="@drawable/random_active"
-                android:contentDescription="@null"
+                android:contentDescription="@string/shuffle_button"
                 android:background="?attr/selectableItemBackgroundBorderless" />
 
             <ImageView

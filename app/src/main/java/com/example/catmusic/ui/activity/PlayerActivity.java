@@ -5,7 +5,6 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -19,6 +18,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 
 import com.bumptech.glide.Glide;
 import com.example.catmusic.Config;
@@ -92,10 +92,6 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
     private boolean serviceBound = false;
     private List<SongsList.ResultBean.SongsBean> songsList = new ArrayList<>();
     private int currentPosition = 0;//当前播放歌曲的索引
-    
-    // 音频焦点管理
-    private AudioManager audioManager;
-    private AudioManager.OnAudioFocusChangeListener audioFocusChangeListener;
     
     // 网络请求相关
     private OkHttpClient okHttpClient;
@@ -173,11 +169,8 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
 
         // 启动并绑定服务
         Intent serviceIntent = new Intent(this, MusicService.class);
-        startService(serviceIntent);
+        ContextCompat.startForegroundService(this, serviceIntent);
         bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
-
-        // 初始化音频焦点管理
-        initializeAudioFocus();
 
     }
 
@@ -190,68 +183,6 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
                 .cache(new okhttp3.Cache(getCacheDir(), 10 * 1024 * 1024)) // 10MB cache
                 .build();
         gson = new Gson();
-    }
-    
-    // 初始化音频焦点管理
-    private void initializeAudioFocus() {
-        audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
-        
-        audioFocusChangeListener = new AudioManager.OnAudioFocusChangeListener() {
-            @Override
-            public void onAudioFocusChange(int focusChange) {
-                switch (focusChange) {
-                    case AudioManager.AUDIOFOCUS_GAIN:
-                        // 重新获得音频焦点，恢复播放
-                        LogUtil.d(TAG, "重新获得音频焦点");
-                        if (musicService != null && musicService.isPaused()) {
-                            musicService.resumeMusic();
-                        }
-                        break;
-                    case AudioManager.AUDIOFOCUS_LOSS:
-                        // 永久失去音频焦点，暂停播放
-                        LogUtil.d(TAG, "永久失去音频焦点");
-                        if (musicService != null && musicService.isPlaying()) {
-                            musicService.pauseMusic();
-                        }
-                        break;
-                    case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
-                        // 暂时失去音频焦点，暂停播放
-                        LogUtil.d(TAG, "暂时失去音频焦点");
-                        if (musicService != null && musicService.isPlaying()) {
-                            musicService.pauseMusic();
-                        }
-                        break;
-                    case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
-                        // 暂时失去音频焦点，可以降低音量
-                        LogUtil.d(TAG, "暂时失去音频焦点，降低音量");
-                        // 这里由MusicService处理音量调整
-                        break;
-                }
-            }
-        };
-        
-        // 请求音频焦点
-        requestAudioFocus();
-    }
-    
-    // 请求音频焦点
-    private boolean requestAudioFocus() {
-        if (audioManager != null) {
-            int result = audioManager.requestAudioFocus(
-                audioFocusChangeListener,
-                AudioManager.STREAM_MUSIC,
-                AudioManager.AUDIOFOCUS_GAIN
-            );
-            return result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
-        }
-        return false;
-    }
-    
-    // 放弃音频焦点
-    private void abandonAudioFocus() {
-        if (audioManager != null) {
-            audioManager.abandonAudioFocus(audioFocusChangeListener);
-        }
     }
     
     // 初始化旋转动画
@@ -1020,11 +951,6 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
     @Override
     protected void onResume() {
         super.onResume();
-        // 在Activity恢复时重新请求音频焦点
-        if (audioManager != null) {
-            requestAudioFocus();
-        }
-        
         // 如果服务已绑定，更新界面
         if (serviceBound && musicService != null) {
             // 更新播放状态
@@ -1047,8 +973,6 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
     @Override
     protected void onPause() {
         super.onPause();
-        // 在Activity暂停时放弃音频焦点
-        abandonAudioFocus();
     }
     
     @Override
@@ -1072,12 +996,11 @@ public class PlayerActivity extends BaseActivity implements MusicService.OnPlayb
         
         // 解绑服务
         if (serviceBound) {
+            musicService.setOnPlaybackStateChange(null);
             unbindService(serviceConnection);
             serviceBound = false;
         }
         
-        // 放弃音频焦点
-        abandonAudioFocus();
     }
 
     // MusicService.OnPlaybackStateChange 接口实现
